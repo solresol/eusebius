@@ -1,1 +1,1 @@
-"""Website generation package for Pausanias analysis project."""
+"""Website generation package for Eusebius analysis project."""

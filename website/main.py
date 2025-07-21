@@ -25,15 +25,15 @@ from .generators import (
 )
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Create a static website to visualize mythic and skeptical aspects of Pausanias passages")
-    parser.add_argument("--database", default="pausanias.sqlite", 
-                        help="SQLite database file (default: pausanias.sqlite)")
-    parser.add_argument("--output-dir", default="pausanias_site",
-                        help="Output directory for the static website (default: pausanias_site)")
+    parser = argparse.ArgumentParser(description="Create a static website to visualize mythic and skeptical aspects of Eusebius passages")
+    parser.add_argument("--database", default="eusebius.sqlite", 
+                        help="SQLite database file (default: eusebius.sqlite)")
+    parser.add_argument("--output-dir", default="eusebius_site",
+                        help="Output directory for the static website (default: eusebius_site)")
     parser.add_argument("--max-passages", type=int, default=None,
                         help="Maximum number of passages to include (default: all)")
-    parser.add_argument("--title", default="Pausanias Analysis",
-                        help="Title for the website (default: 'Pausanias Analysis')")
+    parser.add_argument("--title", default="Eusebius Analysis",
+                        help="Title for the website (default: 'Eusebius Analysis')")
     
     return parser.parse_args()
 

@@ -17,8 +17,8 @@ def create_db_schema(conn):
     ''')
     conn.commit()
 
-def parse_pausanias_file(file_path):
-    """Parse the Pausanias file and extract sections with their IDs."""
+def parse_eusebius_file(file_path):
+    """Parse the Eusebius file and extract sections with their IDs."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -52,11 +52,11 @@ def import_passages(conn, passages):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <pausanias_file> [output_db]")
+        print(f"Usage: {sys.argv[0]} <eusebius_file> [output_db]")
         sys.exit(1)
     
     input_file = sys.argv[1]
-    output_db = sys.argv[2] if len(sys.argv) > 2 else "pausanias.sqlite"
+    output_db = sys.argv[2] if len(sys.argv) > 2 else "eusebius.sqlite"
     
     if not os.path.exists(input_file):
         print(f"Error: Input file '{input_file}' not found.")
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     
     try:
         create_db_schema(conn)
-        passages = parse_pausanias_file(input_file)
+        passages = parse_eusebius_file(input_file)
         
         if not passages:
             print("Warning: No passages found in the input file.")

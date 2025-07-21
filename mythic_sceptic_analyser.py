@@ -14,9 +14,9 @@ from openai import OpenAI
 from tqdm import tqdm
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Analyze Pausanias passages using OpenAI API")
-    parser.add_argument("--database", default="pausanias.sqlite", 
-                        help="SQLite database file (default: pausanias.sqlite)")
+    parser = argparse.ArgumentParser(description="Analyze Eusebius passages using OpenAI API")
+    parser.add_argument("--database", default="eusebius.sqlite", 
+                        help="SQLite database file (default: eusebius.sqlite)")
     parser.add_argument("--openai-api-key-file", default="~/.openai.key",
                         help="File containing OpenAI API key (default: ~/.openai.key)")
     parser.add_argument("--stop-after", type=int, default=None,
@@ -111,7 +111,7 @@ def analyze_passage(client, model, passage_id, passage_text):
                         },
                         "expresses_scepticism": {
                             "type": "boolean",
-                            "description": "Whether Pausanias expresses skepticism about the subject matter"
+                            "description": "Whether Eusebius expresses skepticism about the subject matter"
                         }
                     },
                     "required": ["references_mythic_era", "expresses_scepticism"]
@@ -120,7 +120,7 @@ def analyze_passage(client, model, passage_id, passage_text):
         }
     ]
     
-    system_prompt = """Act as a Pausanias scholar and report whether this passage of Pausanias is a reference to the mythic era, or whether it is closer to being historical. Then report whether Pausanias shows scepticism about the subject matter he is writing about."""
+    system_prompt = """Act as a Eusebius scholar and report whether this passage of Eusebius is a reference to the mythic era, or whether it is closer to being historical. Then report whether Eusebius shows scepticism about the subject matter he is writing about."""
     
     try:
         response = client.chat.completions.create(

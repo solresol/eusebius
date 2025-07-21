@@ -12,9 +12,9 @@ from openai import OpenAI
 from tqdm import tqdm
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Extract proper nouns from Pausanias passages using OpenAI API")
-    parser.add_argument("--database", default="pausanias.sqlite", 
-                        help="SQLite database file (default: pausanias.sqlite)")
+    parser = argparse.ArgumentParser(description="Extract proper nouns from Eusebius passages using OpenAI API")
+    parser.add_argument("--database", default="eusebius.sqlite", 
+                        help="SQLite database file (default: eusebius.sqlite)")
     parser.add_argument("--openai-api-key-file", default="~/.openai.key",
                         help="File containing OpenAI API key (default: ~/.openai.key)")
     parser.add_argument("--stop-after", type=int, default=None,
@@ -166,7 +166,7 @@ def extract_proper_nouns(client, model, passage_id, passage_text, debug=False):
         }
     ]
     
-    system_prompt = """Act as a Classical Greek scholar specializing in Pausanias. Extract all proper nouns (people, places, deities) from the given passage. For each proper noun, provide:
+    system_prompt = """Act as a Classical Greek scholar specializing in Eusebius. Extract all proper nouns (people, places, deities) from the given passage. For each proper noun, provide:
 1. The exact form as it appears in the passage (preserve case and inflection)
 2. The canonical nominative form you would use in a reference work or index
 3. An English transcription/transliteration of the name
@@ -186,9 +186,9 @@ For example, if "Ἀθηνᾶς" appears in the text, you would include:
   "entity_type": "deity"
 }
 
-If no proper nouns are found (which is unlikely in Pausanias), return an empty list.
+If no proper nouns are found (which is unlikely in Eusebius), return an empty list.
 
-IMPORTANT: Almost every passage from Pausanias mentions at least one place or person. Look carefully for proper nouns including place names, personal names, names of gods, heroes, and locations. Greek proper nouns often begin with capital letters."""
+IMPORTANT: Almost every passage from Eusebius mentions at least one place or person. Look carefully for proper nouns including place names, personal names, names of gods, heroes, and locations. Greek proper nouns often begin with capital letters."""
     
     try:
         response = client.chat.completions.create(

@@ -490,7 +490,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pausanias"
+name = "eusebius"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

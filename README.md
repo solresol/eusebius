@@ -1,4 +1,4 @@
-# pausanias
+# eusebius
 
 Digital humanities tools for manipulating the text of Ἑλλάδος Περιήγησις
 
@@ -21,12 +21,12 @@ Creating virtual environment at: .venv
 
 # Data Loading
 
-`uv run pausanias_importer.py description_of_greece.txt`
+`uv run eusebius_importer.py description_of_greece.txt`
 
 This should respond with 
 
 ```
-Successfully imported 3170 passages into pausanias.sqlite
+Successfully imported 3170 passages into eusebius.sqlite
 ```
 
 # Daily
