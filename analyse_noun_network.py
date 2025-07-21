@@ -12,15 +12,15 @@ from collections import defaultdict
 import json
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Analyze the network of proper nouns in Pausanias")
-    parser.add_argument("--database", default="pausanias.sqlite", 
-                        help="SQLite database file (default: pausanias.sqlite)")
+    parser = argparse.ArgumentParser(description="Analyze the network of proper nouns in Eusebius")
+    parser.add_argument("--database", default="eusebius.sqlite", 
+                        help="SQLite database file (default: eusebius.sqlite)")
     parser.add_argument("--min-cooccurrence", type=int, default=1,
                         help="Minimum number of co-occurrences for an edge (default: 1)")
     parser.add_argument("--top-nodes", type=int, default=100,
                         help="Number of top nodes to include in visualization (default: 100)")
-    parser.add_argument("--output-dir", default="pausanias_site/network_viz",
-                        help="Output directory for network visualizations (default: pausanias_site/network_viz)")
+    parser.add_argument("--output-dir", default="eusebius_site/network_viz",
+                        help="Output directory for network visualizations (default: eusebius_site/network_viz)")
     
     return parser.parse_args()
 
@@ -236,7 +236,7 @@ def create_d3_html_template(output_dir):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pausanias Proper Noun Network</title>
+    <title>Eusebius Proper Noun Network</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
@@ -361,8 +361,8 @@ def create_d3_html_template(output_dir):
 </head>
 <body>
     <header>
-        <h1>Pausanias Proper Noun Network</h1>
-        <p>Interactive visualization of proper noun connections in Pausanias' Description of Greece</p>
+        <h1>Eusebius Proper Noun Network</h1>
+        <p>Interactive visualization of proper noun connections in Eusebius' Description of Greece</p>
     </header>
     
     <nav>
@@ -709,7 +709,7 @@ def create_d3_html_template(output_dir):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Component {component_id} - Pausanias Proper Noun Network</title>
+    <title>Component {component_id} - Eusebius Proper Noun Network</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
@@ -834,7 +834,7 @@ def create_d3_html_template(output_dir):
 </head>
 <body>
     <header>
-        <h1>Component {component_id} - Pausanias Proper Noun Network</h1>
+        <h1>Component {component_id} - Eusebius Proper Noun Network</h1>
         <p>Interactive visualization of proper noun connections in component {component_id}</p>
     </header>
     
@@ -1332,7 +1332,7 @@ def visualize_network(full_graph, all_centrality_df, component_graphs, output_di
             width=0.3
         )
     
-    plt.title(f"Pausanias Proper Noun Network - {len(component_graphs)} Components")
+    plt.title(f"Eusebius Proper Noun Network - {len(component_graphs)} Components")
     plt.axis('off')
     plt.legend(loc='lower center', ncol=5, bbox_to_anchor=(0.5, -0.05))
     

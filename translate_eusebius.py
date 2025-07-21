@@ -11,9 +11,9 @@ from openai import OpenAI
 from tqdm import tqdm
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Translate Pausanias passages from Greek to English using OpenAI API")
-    parser.add_argument("--database", default="pausanias.sqlite", 
-                        help="SQLite database file (default: pausanias.sqlite)")
+    parser = argparse.ArgumentParser(description="Translate Eusebius passages from Greek to English using OpenAI API")
+    parser.add_argument("--database", default="eusebius.sqlite", 
+                        help="SQLite database file (default: eusebius.sqlite)")
     parser.add_argument("--openai-api-key-file", default="~/.openai.key",
                         help="File containing OpenAI API key (default: ~/.openai.key)")
     parser.add_argument("--stop-after", type=int, default=None,
@@ -86,17 +86,17 @@ def save_translation(conn, passage_id, greek_text, english_translation, model, i
 def translate_passage(client, model, passage_id, passage_text, debug=False):
     """Translate a passage from Greek to English using OpenAI API and track token usage."""
     
-    system_prompt = """You are an expert in Ancient Greek who specializes in translating Pausanias. 
+    system_prompt = """You are an expert in Ancient Greek who specializes in translating Eusebius. 
 Translate the provided Greek passage into clear, accurate English that preserves the meaning and style of the original.
 Provide only the translation itself, with no additional notes or commentary.
-Your translation should be scholarly but readable, suitable for academic study of Pausanias."""
+Your translation should be scholarly but readable, suitable for academic study of Eusebius."""
     
     try:
         response = client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Passage {passage_id}:\n\n{passage_text}\n\nPlease translate this passage from Pausanias into English."}
+                {"role": "user", "content": f"Passage {passage_id}:\n\n{passage_text}\n\nPlease translate this passage from Eusebius into English."}
             ]
         )
         

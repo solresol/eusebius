@@ -1,6 +1,6 @@
 # Website Generation Module
 
-This directory contains modularized code for the Pausanias website generation.
+This directory contains modularized code for the Eusebius website generation.
 
 Original monolithic script has been split into specialized modules:
 - `data.py`: Database operations and data retrieval
@@ -12,5 +12,5 @@ Original monolithic script has been split into specialized modules:
 ## Usage
 ```python
 # From the parent directory
-python -m website.main --database pausanias.sqlite --output-dir pausanias_site
+python -m website.main --database eusebius.sqlite --output-dir eusebius_site
 ```

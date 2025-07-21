@@ -19,7 +19,7 @@ def generate_home_page(output_dir, title, timestamp):
     <body>
         <header>
             <h1>{title}</h1>
-            <p>Analysis of Pausanias' Description of Greece</p>
+            <p>Analysis of Eusebius' Description of Greece</p>
         </header>
         
         <nav>
@@ -32,9 +32,9 @@ def generate_home_page(output_dir, title, timestamp):
         </nav>
         
         <div class="container">
-            <h2>Welcome to the Pausanias Analysis Project</h2>
+            <h2>Welcome to the Eusebius Analysis Project</h2>
             
-            <p>This site presents an analysis of Pausanias' "Description of Greece", focusing on two key aspects:</p>
+            <p>This site presents an analysis of Eusebius' "Description of Greece", focusing on two key aspects:</p>
             
             <div class="home-card">
                 <h2>Mythic vs. Historical Content</h2>
@@ -45,7 +45,7 @@ def generate_home_page(output_dir, title, timestamp):
             
             <div class="home-card">
                 <h2>Expression of Skepticism</h2>
-                <p>Discover how Pausanias expresses skepticism (or credulity) through his writing. 
+                <p>Discover how Eusebius expresses skepticism (or credulity) through his writing. 
                    Skeptical content is highlighted in green, while non-skeptical appears in orange and bold.</p>
                 <a href="skepticism.html">View Skepticism Analysis</a>
             </div>
@@ -82,7 +82,7 @@ def generate_mythic_page(passages_df, mythic_color_map, mythic_class_map, proper
     <body>
         <header>
             <h1>{title}</h1>
-            <p>Analysis of Mythic vs. Historical Elements in Pausanias</p>
+            <p>Analysis of Mythic vs. Historical Elements in Eusebius</p>
         </header>
         
         <nav>
@@ -194,7 +194,7 @@ def generate_skepticism_page(passages_df, skeptic_color_map, skeptic_class_map, 
     <body>
         <header>
             <h1>{title}</h1>
-            <p>Analysis of Skepticism in Pausanias</p>
+            <p>Analysis of Skepticism in Eusebius</p>
         </header>
         
         <nav>
@@ -324,7 +324,7 @@ def generate_mythic_words_page(mythic_predictors, output_dir, title):
         
         <div class="container">
             <h2>Predictors of Mythic Content</h2>
-            <p>These words and phrases are most strongly associated with mythic content in Pausanias.</p>
+            <p>These words and phrases are most strongly associated with mythic content in Eusebius.</p>
             
             <table class="predictor-table">
                 <thead>
@@ -350,7 +350,7 @@ def generate_mythic_words_page(mythic_predictors, output_dir, title):
             </table>
             
             <h2>Predictors of Historical Content</h2>
-            <p>These words and phrases are most strongly associated with historical content in Pausanias.</p>
+            <p>These words and phrases are most strongly associated with historical content in Eusebius.</p>
             
             <table class="predictor-table">
                 <thead>
@@ -419,7 +419,7 @@ def generate_skeptic_words_page(skeptic_predictors, output_dir, title):
         
         <div class="container">
             <h2>Predictors of Skeptical Content</h2>
-            <p>These words and phrases are most strongly associated with skeptical content in Pausanias.</p>
+            <p>These words and phrases are most strongly associated with skeptical content in Eusebius.</p>
             
             <table class="predictor-table">
                 <thead>
@@ -445,7 +445,7 @@ def generate_skeptic_words_page(skeptic_predictors, output_dir, title):
             </table>
             
             <h2>Predictors of Non-skeptical Content</h2>
-            <p>These words and phrases are most strongly associated with non-skeptical content in Pausanias.</p>
+            <p>These words and phrases are most strongly associated with non-skeptical content in Eusebius.</p>
             
             <table class="predictor-table">
                 <thead>

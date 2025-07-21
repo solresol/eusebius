@@ -15,9 +15,9 @@ from sklearn.metrics import classification_report
 import joblib
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Create TF-IDF and logistic regression models for Pausanias passages")
-    parser.add_argument("--database", default="pausanias.sqlite", 
-                        help="SQLite database file (default: pausanias.sqlite)")
+    parser = argparse.ArgumentParser(description="Create TF-IDF and logistic regression models for Eusebius passages")
+    parser.add_argument("--database", default="eusebius.sqlite", 
+                        help="SQLite database file (default: eusebius.sqlite)")
     parser.add_argument("--min-samples", type=int, default=20,
                         help="Minimum number of samples required to build models (default: 20)")
     parser.add_argument("--test-size", type=float, default=0.2,
