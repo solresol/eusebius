@@ -10,9 +10,7 @@ def create_db_schema(conn):
     conn.execute('''
     CREATE TABLE IF NOT EXISTS passages (
         id TEXT PRIMARY KEY,
-        passage TEXT NOT NULL,
-        references_mythic_era BOOL,
-        expresses_scepticism BOOL
+        passage TEXT NOT NULL
     )
     ''')
     conn.commit()

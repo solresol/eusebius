@@ -367,10 +367,6 @@ def create_d3_html_template(output_dir):
     
     <nav>
         <a href="../index.html">Home</a>
-        <a href="../mythic.html">Mythic Analysis</a>
-        <a href="../skepticism.html">Skepticism Analysis</a>
-        <a href="../mythic_words.html">Mythic Words</a>
-        <a href="../skeptic_words.html">Skeptic Words</a>
         <a href="index.html" class="active">Network Analysis</a>
     </nav>
     
@@ -840,10 +836,6 @@ def create_d3_html_template(output_dir):
     
     <nav>
         <a href="../index.html">Home</a>
-        <a href="../mythic.html">Mythic Analysis</a>
-        <a href="../skepticism.html">Skepticism Analysis</a>
-        <a href="../mythic_words.html">Mythic Words</a>
-        <a href="../skeptic_words.html">Skeptic Words</a>
         <a href="index.html">Network Analysis</a>
         <a href="component_{component_id}.html" class="active">Component {component_id}</a>
     </nav>
@@ -1419,49 +1411,6 @@ def export_for_d3(G, component_graphs, all_centrality_df, filename):
     
     print(f"Exported full network data for D3 visualization to {filename}")
 
-def modify_website_for_network_viz(output_dir):
-    """Modify the main website's navigation to include network visualization."""
-    # Define the path to the site's home page
-    index_path = os.path.join(output_dir, '..', 'index.html')
-    
-    # Check if file exists
-    if not os.path.exists(index_path):
-        print(f"Warning: Cannot find main website index at {index_path}")
-        return
-    
-    try:
-        # Read the current content
-        with open(index_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Find the navigation section
-        nav_start = content.find('<nav>')
-        nav_end = content.find('</nav>', nav_start)
-        
-        if nav_start >= 0 and nav_end > nav_start:
-            # Extract the navigation
-            nav_content = content[nav_start + 5:nav_end].strip()
-            
-            # Check if network analysis link already exists
-            if 'Network Analysis' not in nav_content:
-                # Add the new link
-                new_nav = nav_content + '\n            <a href="network_viz/index.html">Network Analysis</a>'
-                
-                # Replace the old navigation with the new one
-                content = content[:nav_start + 5] + new_nav + content[nav_end:]
-                
-                # Write the updated content
-                with open(index_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                
-                print(f"Updated main website navigation to include Network Analysis link")
-            else:
-                print("Network Analysis link already exists in the navigation")
-        else:
-            print("Could not find navigation section in the main website index")
-    
-    except Exception as e:
-        print(f"Error updating main website navigation: {e}")
 
 if __name__ == '__main__':
     args = parse_arguments()
@@ -1513,9 +1462,6 @@ if __name__ == '__main__':
             print("Generating network visualizations...")
             visualize_network(full_graph, all_centrality_df, component_graphs, args.output_dir, args.top_nodes)
             
-            # Modify main website to include network visualization link
-            print("Updating main website navigation...")
-            modify_website_for_network_viz(args.output_dir)
         else:
             print("No centrality data to save or visualize.")
         
