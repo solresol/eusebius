@@ -36,5 +36,16 @@ I broke it up into smaller chunks. Schedule `cronscript.sh` (and alter the
 `--stop` parameter smaller if you have less allocation than me, or increase
 it if you don't mind spending money).
 
+# Network Visualisation
+
+To create a small website containing the D3.js network page run:
+
+```
+uv run create_website.py
+```
+
+The output is written to `eusebius_site/` with the interactive network
+available under `network_viz/index.html`.
+
 
 
