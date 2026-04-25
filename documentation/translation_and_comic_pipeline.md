@@ -7,8 +7,8 @@ Date: 2026-04-25
 Use the best available model for the translation and planning work, but keep
 the model names configurable rather than hard-coded:
 
-- `EUSEBIUS_TEXT_MODEL=gpt-5.5`
-- `EUSEBIUS_TEXT_MODEL_HIGH=gpt-5.5`
+- `EUSEBIUS_TEXT_MODEL=gpt-5.4`
+- `EUSEBIUS_TEXT_MODEL_HIGH=gpt-5.4`
 - `EUSEBIUS_IMAGE_MODEL=gpt-image-2`
 
 Use the text model for daily translation and comic planning. If a cheaper
