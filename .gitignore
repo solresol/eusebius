@@ -2,3 +2,5 @@
 eusebius.sqlite
 eusebius_site
 eusebius.old
+data/raw/
+logs/

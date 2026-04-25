@@ -1,6 +1,11 @@
 # eusebius
 
-Digital humanities tools for manipulating the text of Ἑλλάδος Περιήγησις
+Digital humanities and explainable NLP tools for Eusebius of Caesarea.
+
+The current baseline imports Eusebius' *Historia Ecclesiastica* from
+OpenGreekAndLatin First1KGreek TEI into PostgreSQL on `raksasa`, generates a
+small static site, and deploys it to `merah`. The default pipeline does not call
+OpenAI.
 
 # Tooling
 
@@ -21,31 +26,36 @@ Creating virtual environment at: .venv
 
 # Data Loading
 
-`uv run eusebius_importer.py description_of_greece.txt`
+PostgreSQL is the canonical store:
 
-This should respond with 
-
+```bash
+createdb eusebius
+uv run python scripts/import_first1k.py
 ```
-Successfully imported 3170 passages into eusebius.sqlite
+
+To run a smoke test:
+
+```bash
+uv run python scripts/import_first1k.py --limit-books 1
 ```
 
 # Daily
 
-I didn't have enough token allocation to run the whole corpus in one go, so
-I broke it up into smaller chunks. Schedule `cronscript.sh` (and alter the
-`--stop` parameter smaller if you have less allocation than me, or increase
-it if you don't mind spending money).
+The scheduled pipeline is intentionally cheap:
 
-# Network Visualisation
-
-To create a small website containing the D3.js network page run:
-
-```
-uv run create_website.py
+```bash
+./cronscript.sh
 ```
 
-The output is written to `eusebius_site/` with the interactive network
-available under `network_viz/index.html`.
+This fetches First1KGreek TEI, imports it into PostgreSQL, regenerates the
+static site, and deploys to `eusebius@merah:/var/www/vhosts/eusebius.symmachus.org/htdocs/`.
 
+# Static Site
 
+To generate without deploying:
 
+```bash
+uv run python scripts/generate_site.py
+```
+
+The output is written to `eusebius_site/`.
