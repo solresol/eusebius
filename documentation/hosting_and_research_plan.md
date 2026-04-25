@@ -98,6 +98,7 @@ The first pipeline is deliberately small:
 
 Installed `eusebius@raksasa` cron jobs:
 
+- `05 3 * * *`: daily `git pull --ff-only` to keep the service checkout current.
 - `15 3 * * *`: daily no-OpenAI static-site rebuild from PostgreSQL and deploy.
 - `45 3 * * 1`: weekly no-OpenAI source refresh/import, site rebuild, and deploy.
 
@@ -122,10 +123,11 @@ These are meant to stay explainable: start with transparent features, networks, 
 ## Next Work Items
 
 1. Commit and push the PostgreSQL/static-pipeline changes.
-2. Replace or remove the obsolete Pausanias-derived scripts once the PostgreSQL importer/site generator are stable.
-3. Add a no-OpenAI place extraction pass:
+2. Add the translation/comic planning pipeline described in `documentation/translation_and_comic_pipeline.md`.
+3. Replace or remove the obsolete Pausanias-derived scripts once the PostgreSQL importer/site generator are stable.
+4. Add a no-OpenAI place extraction pass:
    - start from ToposText tagged-place counts as a comparison target;
    - add Wikidata/Pleiades lookups only for high-confidence city/place strings;
    - store transport features such as coastal/inland and approximate sea/land path proxies.
-4. Add source/citation formula extraction with regular expressions before using LLMs.
-5. If OpenAI is later useful, run only capped batch jobs and record token counts by run.
+5. Add source/citation formula extraction with regular expressions before using LLMs.
+6. If OpenAI is used, run only capped batch jobs and record token counts by run.
