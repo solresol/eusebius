@@ -4,3 +4,6 @@ eusebius_site
 eusebius.old
 data/raw/
 logs/
+
+__pycache__/
+*.pyc
