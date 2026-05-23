@@ -122,7 +122,15 @@ def fetch_rows(conn: psycopg.Connection) -> list[dict]:
             ORDER BY completed_at DESC NULLS LAST, translation_run_id DESC
             LIMIT 1
         ) AS tr ON TRUE
-        ORDER BY book::int NULLS LAST, chapter::int NULLS LAST, paragraph_index
+        ORDER BY
+            CASE WHEN book ~ '^[0-9]+$' THEN book::int END NULLS LAST,
+            book,
+            CASE
+                WHEN chapter = 'prologue' THEN 0
+                WHEN chapter ~ '^[0-9]+$' THEN chapter::int
+            END NULLS LAST,
+            chapter,
+            paragraph_index
         """
     ).fetchall()
     return [

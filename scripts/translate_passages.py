@@ -89,7 +89,15 @@ def fetch_pending_passages(
               AND r.prompt_version = %s
               AND r.status = 'completed'
         )
-        ORDER BY p.book::int NULLS LAST, p.chapter::int NULLS LAST, p.paragraph_index
+        ORDER BY
+            CASE WHEN p.book ~ '^[0-9]+$' THEN p.book::int END NULLS LAST,
+            p.book,
+            CASE
+                WHEN p.chapter = 'prologue' THEN 0
+                WHEN p.chapter ~ '^[0-9]+$' THEN p.chapter::int
+            END NULLS LAST,
+            p.chapter,
+            p.paragraph_index
         LIMIT %s
         """,
         (model, prompt_version, limit),
