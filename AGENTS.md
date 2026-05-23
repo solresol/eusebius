@@ -29,6 +29,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - Static output: `eusebius_site/`
 - Use `gpt-5.4-mini` only for rough-English cleanup when both Greek and English are supplied
 - Use `gpt-5.5` for real Greek translation, with a 10,000-token daily budget
+- The service-user OpenAI key path is `~/.openai.eusebius.key`
 - Bulk generated comic images should not be committed to Git; store originals under `/home/eusebius/eusebius-comic/` on `raksasa`
 
 ## Testing

@@ -73,8 +73,8 @@ For cron use on `raksasa`, run:
 
 That script defaults to cleanup mode, processes up to
 `EUSEBIUS_TRANSLATION_LIMIT` passages, regenerates the site, and deploys the
-static output. It requires `OPENAI_API_KEY` or a readable `~/.openai.key` for
-the `eusebius` service user.
+static output. It requires `OPENAI_API_KEY` or a readable
+`~/.openai.eusebius.key` for the `eusebius` service user.
 
 # Daily
 

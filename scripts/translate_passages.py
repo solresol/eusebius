@@ -59,7 +59,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--openai-api-key-file",
-        default=os.environ.get("OPENAI_API_KEY_FILE", "~/.openai.key"),
+        default=os.environ.get("OPENAI_API_KEY_FILE", "~/.openai.eusebius.key"),
         help="Optional file containing the OpenAI API key if OPENAI_API_KEY is unset",
     )
     parser.add_argument(

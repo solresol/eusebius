@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - First1K English is rough OCR/alignment reference text, not the clean public translation
 - Use `gpt-5.4-mini` for rough-English cleanup only, with Greek and English both in the prompt
 - Use `gpt-5.5` for real Greek translation, with a 10,000-token daily budget
+- The service-user OpenAI key path is `~/.openai.eusebius.key`
 - Bulk generated comic images should not be committed to Git; store originals under `/home/eusebius/eusebius-comic/` on `raksasa`
 
 ## Testing
