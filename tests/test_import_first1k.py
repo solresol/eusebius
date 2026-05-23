@@ -1,6 +1,12 @@
 import unittest
 
 from scripts.import_first1k import is_title_matter, parse_passages
+from scripts.generate_site import (
+    book_page_name,
+    group_by_book,
+    group_by_section,
+    section_page_name,
+)
 
 
 class ImportFirst1KTests(unittest.TestCase):
@@ -29,6 +35,20 @@ class ImportFirst1KTests(unittest.TestCase):
         self.assertTrue(is_title_matter("ΕΥΣΗΒΙΟΥ"))
         self.assertTrue(is_title_matter("A"))
         self.assertFalse(is_title_matter("Ι. τὰς τῶν ἱερῶν ἀποστόλων διαδοχὰς"))
+
+    def test_passage_browser_paths_and_grouping(self) -> None:
+        rows = [
+            {"book": "1", "chapter": "1"},
+            {"book": "1", "chapter": "2"},
+            {"book": "2", "chapter": "prologue"},
+        ]
+        self.assertEqual(sorted(group_by_book(rows)), ["1", "2"])
+        self.assertEqual(sorted(group_by_section(rows[:2])), ["1", "2"])
+        self.assertEqual(book_page_name("1"), "passages-book-1.html")
+        self.assertEqual(
+            section_page_name("2", "prologue"),
+            "passages-book-2-section-prologue.html",
+        )
 
 
 if __name__ == "__main__":

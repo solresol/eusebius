@@ -13,6 +13,7 @@ import unicodedata
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Iterable
 
 import psycopg
 
@@ -101,6 +102,51 @@ def greek_tokens(text: str) -> list[str]:
         if len(token) > 2 and token not in GREEK_STOPWORDS:
             tokens.append(token)
     return tokens
+
+
+def numeric_label_sort_key(value: str) -> tuple[int, int | str]:
+    if value == "prologue":
+        return (0, 0)
+    if value.isdigit():
+        return (1, int(value))
+    return (2, value)
+
+
+def book_sort_key(value: str) -> tuple[int, int | str]:
+    if value.isdigit():
+        return (0, int(value))
+    return (1, value)
+
+
+def slug(value: str) -> str:
+    slug_text = re.sub(r"[^a-zA-Z0-9]+", "-", value.lower()).strip("-")
+    return slug_text or "unknown"
+
+
+def book_page_name(book: str) -> str:
+    return f"passages-book-{slug(book)}.html"
+
+
+def section_page_name(book: str, section: str) -> str:
+    return f"passages-book-{slug(book)}-section-{slug(section)}.html"
+
+
+def section_label(section: str) -> str:
+    return "Prologue" if section == "prologue" else f"Section {section}"
+
+
+def group_by_book(rows: Iterable[dict]) -> dict[str, list[dict]]:
+    books: defaultdict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        books[row["book"]].append(row)
+    return dict(books)
+
+
+def group_by_section(rows: Iterable[dict]) -> dict[str, list[dict]]:
+    sections: defaultdict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        sections[row["chapter"]].append(row)
+    return dict(sections)
 
 
 def fetch_rows(conn: psycopg.Connection) -> list[dict]:
@@ -208,6 +254,165 @@ def render_page(title: str, body: str) -> str:
 """
 
 
+def render_translation_block(row: dict) -> str:
+    if row["ai_english_translation"]:
+        completed_at = row["ai_translation_completed_at"]
+        if completed_at:
+            completed_at = completed_at.astimezone(UTC).strftime("%Y-%m-%d")
+        completed_suffix = f", {completed_at}" if completed_at else ""
+        prompt_version = row["ai_translation_prompt_version"]
+        if prompt_version.startswith("english-cleanup"):
+            label = "AI English cleanup"
+        elif prompt_version.startswith("greek-translation"):
+            label = "AI Greek translation"
+        else:
+            label = "AI English text"
+        return f"""
+              <p class="translation-meta">{label}, {html.escape(row["ai_translation_model"])}{completed_suffix}</p>
+              <p>{html.escape(row["ai_english_translation"])}</p>
+        """
+
+    source_reference = ""
+    if row["english_text"]:
+        source_reference = f"""
+              <details>
+                <summary>First1K English reference (rough OCR/alignment source)</summary>
+                <p>{html.escape(row["english_text"])}</p>
+              </details>
+        """
+    return f"""
+              <p class="note">No clean AI English text has been generated for this passage yet.</p>
+              {source_reference}
+    """
+
+
+def ref_range(rows: list[dict]) -> str:
+    if not rows:
+        return ""
+    first_ref = rows[0]["canonical_ref"]
+    last_ref = rows[-1]["canonical_ref"]
+    if first_ref == last_ref:
+        return first_ref
+    return f"{first_ref}-{last_ref}"
+
+
+def render_passage_browser(output_dir: Path, rows: list[dict]) -> None:
+    books = group_by_book(rows)
+    sorted_books = sorted(books, key=book_sort_key)
+
+    book_items = []
+    for book in sorted_books:
+        book_rows = books[book]
+        sections = group_by_section(book_rows)
+        book_items.append(
+            f"""
+            <li>
+              <a href="{book_page_name(book)}">Book {html.escape(book)}</a>
+              <span>{len(sections)} sections, {len(book_rows)} passages, {sum(row["greek_word_count"] for row in book_rows)} Greek words</span>
+              <small>{html.escape(ref_range(book_rows))}</small>
+            </li>
+            """
+        )
+
+    passages_body = f"""
+    <section>
+      <h2>Books</h2>
+      <p class="note">Choose a book, then a section. Full passage text is loaded only on section pages.</p>
+      <ol class="book-list">
+        {"".join(book_items)}
+      </ol>
+    </section>
+    """
+    write_text(output_dir / "passages.html", render_page("Eusebius Passages", passages_body))
+
+    all_sections: list[tuple[str, str]] = []
+    for book in sorted_books:
+        for section in sorted(group_by_section(books[book]), key=numeric_label_sort_key):
+            all_sections.append((book, section))
+
+    section_index = {
+        (book, section): index for index, (book, section) in enumerate(all_sections)
+    }
+
+    for book in sorted_books:
+        book_rows = books[book]
+        sections = group_by_section(book_rows)
+        section_rows = []
+        for section in sorted(sections, key=numeric_label_sort_key):
+            rows_for_section = sections[section]
+            section_rows.append(
+                f"""
+                <tr>
+                  <td><a href="{section_page_name(book, section)}">{html.escape(section_label(section))}</a></td>
+                  <td>{len(rows_for_section)}</td>
+                  <td>{sum(row["greek_word_count"] for row in rows_for_section)}</td>
+                  <td>{html.escape(ref_range(rows_for_section))}</td>
+                </tr>
+                """
+            )
+        book_body = f"""
+        <p class="breadcrumb"><a href="passages.html">Passages</a> / Book {html.escape(book)}</p>
+        <section>
+          <h2>Book {html.escape(book)}</h2>
+          <table>
+            <thead><tr><th>Section</th><th>Passages</th><th>Greek words</th><th>References</th></tr></thead>
+            <tbody>{"".join(section_rows)}</tbody>
+          </table>
+        </section>
+        """
+        write_text(
+            output_dir / book_page_name(book),
+            render_page(f"Eusebius Book {book}", book_body),
+        )
+
+    for book, section in all_sections:
+        section_rows = group_by_section(books[book])[section]
+        current_index = section_index[(book, section)]
+        previous_link = ""
+        next_link = ""
+        if current_index > 0:
+            previous_book, previous_section = all_sections[current_index - 1]
+            previous_link = (
+                f'<a href="{section_page_name(previous_book, previous_section)}">'
+                f"Previous: Book {html.escape(previous_book)} {html.escape(section_label(previous_section))}</a>"
+            )
+        if current_index + 1 < len(all_sections):
+            next_book, next_section = all_sections[current_index + 1]
+            next_link = (
+                f'<a href="{section_page_name(next_book, next_section)}">'
+                f"Next: Book {html.escape(next_book)} {html.escape(section_label(next_section))}</a>"
+            )
+
+        passage_items = []
+        for row in section_rows:
+            passage_items.append(
+                f"""
+                <article class="passage" id="p-{html.escape(row["canonical_ref"])}">
+                  <h2>{html.escape(row["canonical_ref"])}</h2>
+                  <p lang="grc">{html.escape(row["greek_text"])}</p>
+                  {render_translation_block(row)}
+                </article>
+                """
+            )
+        section_body = f"""
+        <p class="breadcrumb">
+          <a href="passages.html">Passages</a> /
+          <a href="{book_page_name(book)}">Book {html.escape(book)}</a> /
+          {html.escape(section_label(section))}
+        </p>
+        <nav class="pager">{previous_link}{next_link}</nav>
+        {"".join(passage_items)}
+        <nav class="pager">{previous_link}{next_link}</nav>
+        """
+        write_text(
+            output_dir / section_page_name(book, section),
+            render_page(
+                f"Eusebius Book {book}, {section_label(section)}",
+                section_body,
+            ),
+        )
+
+
 def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -285,50 +490,7 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
     """
     write_text(output_dir / "research.html", render_page("Eusebius Research Questions", research_body))
 
-    passage_items = []
-    for row in rows[:250]:
-        if row["ai_english_translation"]:
-            completed_at = row["ai_translation_completed_at"]
-            if completed_at:
-                completed_at = completed_at.astimezone(UTC).strftime("%Y-%m-%d")
-            completed_suffix = f", {completed_at}" if completed_at else ""
-            prompt_version = row["ai_translation_prompt_version"]
-            if prompt_version.startswith("english-cleanup"):
-                label = "AI English cleanup"
-            elif prompt_version.startswith("greek-translation"):
-                label = "AI Greek translation"
-            else:
-                label = "AI English text"
-            translation_html = f"""
-              <p class="translation-meta">{label}, {html.escape(row["ai_translation_model"])}{completed_suffix}</p>
-              <p>{html.escape(row["ai_english_translation"])}</p>
-            """
-        else:
-            source_reference = ""
-            if row["english_text"]:
-                source_reference = f"""
-              <details>
-                <summary>First1K English reference (rough OCR/alignment source)</summary>
-                <p>{html.escape(row["english_text"])}</p>
-              </details>
-                """
-            translation_html = f"""
-              <p class="note">No clean AI English text has been generated for this passage yet.</p>
-              {source_reference}
-            """
-        passage_items.append(
-            f"""
-            <article class="passage" id="p-{html.escape(row["canonical_ref"])}">
-              <h2>{html.escape(row["canonical_ref"])}</h2>
-              <p lang="grc">{html.escape(row["greek_text"])}</p>
-              {translation_html}
-            </article>
-            """
-        )
-    passages_body = "\n".join(passage_items)
-    if len(rows) > 250:
-        passages_body += f"<p class='note'>Showing the first 250 of {len(rows)} imported passages.</p>"
-    write_text(output_dir / "passages.html", render_page("Eusebius Passages", passages_body))
+    render_passage_browser(output_dir, rows)
 
     write_text(
         output_dir / "assets" / "style.css",
@@ -356,6 +518,22 @@ table { border-collapse: collapse; width: 100%; background: white; }
 th, td { border: 1px solid #d7d2c8; padding: .45rem .6rem; text-align: left; }
 .terms { columns: 2; }
 .terms li { break-inside: avoid; }
+.book-list { list-style: none; margin: 0; padding: 0; }
+.book-list li {
+  border-top: 1px solid #d7d2c8;
+  display: grid;
+  gap: .15rem;
+  padding: .85rem 0;
+}
+.book-list a { font-weight: 700; }
+.book-list span, .book-list small, .breadcrumb { color: #5a646d; }
+.pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: .8rem 0 1.2rem;
+}
+.pager a { color: #285680; }
 .passage p[lang="grc"] { font-size: 1.08rem; }
 .translation-meta { color: #5a646d; font-size: .92rem; margin-bottom: -.25rem; }
 details { background: #fff; border: 1px solid #d7d2c8; padding: .65rem .8rem; }
@@ -364,6 +542,7 @@ summary { cursor: pointer; font-weight: 700; }
 @media (max-width: 680px) {
   dl { grid-template-columns: 1fr; }
   .terms { columns: 1; }
+  .pager { display: grid; }
 }
 """.strip()
         + "\n",

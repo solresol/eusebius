@@ -88,7 +88,7 @@ The first pipeline is deliberately small:
 - `scripts/generate_site.py`
   - reads PostgreSQL;
   - writes a static status site;
-  - publishes corpus counts, book-level counts, top Greek terms, sample passages, clean AI translations when available, and the research agenda;
+  - publishes corpus counts, book-level counts, top Greek terms, a book/section passage browser, clean AI translations when available, and the research agenda;
   - does not call OpenAI.
 - `scripts/run_pipeline.sh`
   - attempts `git pull --ff-only` and logs any pull failure without blocking the no-OpenAI rebuild;

@@ -96,3 +96,5 @@ uv run python scripts/generate_site.py
 ```
 
 The output is written to `eusebius_site/`.
+The passage browser writes lightweight book and section index pages; full
+passage text is only loaded on a single section page.
