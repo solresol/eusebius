@@ -7,27 +7,33 @@ Date: 2026-04-25
 Use the best available model for the translation and planning work, but keep
 the model names configurable rather than hard-coded:
 
-- `EUSEBIUS_TRANSLATION_MODEL=gpt-5.4-mini`
+- `EUSEBIUS_TRANSLATION_MODE=cleanup`
+- cleanup mode: `gpt-5.4-mini`, 500,000 tokens/day
+- translate mode: `gpt-5.5`, 10,000 tokens/day
 - `EUSEBIUS_TEXT_MODEL=gpt-5.4`
 - `EUSEBIUS_TEXT_MODEL_HIGH=gpt-5.4`
 - `EUSEBIUS_IMAGE_MODEL=gpt-image-2`
 
-Use the mini translation model for capped daily translation cleanup, and keep
-the higher text model available for comic planning or harder passages. If a
-cheaper model is later good enough for simple passages, make that an explicit
-configuration change rather than lowering quality silently.
+Use `gpt-5.4-mini` only for English cleanup when the prompt includes both the
+Greek and the existing First1K English. It should fix minor OCR, spacing,
+punctuation, and alignment problems in the English, not produce a fresh
+translation. Use `gpt-5.5` for real translation from Greek, with a much tighter
+daily token budget.
 
 ## Daily Translation
 
-Goal: create our own English translation from the Greek for fun, while keeping
-cost bounded.
+Goal: first clean the existing English cheaply, then create our own English
+translation from the Greek where needed while keeping cost bounded.
 
 Default policy:
 
-- Process 3-5 passages per day.
-- Translate from `passages.greek_text`; use the First1K English only as a rough
-  comparison/reference field, not as the published translation. It contains OCR
-  errors and can be misaligned around title matter.
+- Cleanup mode may process many passages per day, up to 500,000 tokens.
+- Real translation mode is capped at 10,000 tokens/day.
+- Cleanup mode receives `passages.greek_text` and `passages.english_text`, and
+  lightly repairs the English.
+- Translation mode translates from `passages.greek_text`; use the First1K
+  English only as a rough comparison/reference field. It contains OCR errors
+  and can be misaligned around title matter.
 - Store every run in `ai_translation_runs` with model, prompt version, token
   counts, status, errors, and completion time.
 - Do not overwrite translations silently; a new prompt/model gets a new row.

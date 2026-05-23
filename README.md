@@ -43,17 +43,27 @@ The First1K English file is retained as a rough comparison source only. It has
 OCR and alignment problems, so the public site prefers translations stored in
 `ai_translation_runs` and labels the First1K English as rough reference text.
 
-# Translation
+# English Cleanup and Translation
 
-To generate a capped batch of clean translations:
+To clean up the rough First1K English against the Greek:
 
 ```bash
-uv run python scripts/translate_passages.py --limit 5
+uv run python scripts/translate_passages.py --mode cleanup --limit 100
 ```
 
-The default model is `gpt-5.4-mini`, configurable with
-`EUSEBIUS_TRANSLATION_MODEL`. Runs are stored in PostgreSQL with model, prompt
-version, token counts, status, and error messages.
+Cleanup mode uses `gpt-5.4-mini` by default. It is only for minor OCR,
+spacing, punctuation, and alignment repairs to the supplied English, with the
+Greek used as a guardrail. The default daily token budget is 500,000 tokens.
+
+For a fresh translation from Greek:
+
+```bash
+uv run python scripts/translate_passages.py --mode translate --limit 3
+```
+
+Translation mode uses `gpt-5.5` by default and has a 10,000-token daily budget.
+Runs are stored in PostgreSQL with model, prompt version, token counts, status,
+and error messages.
 
 For cron use on `raksasa`, run:
 
@@ -61,9 +71,10 @@ For cron use on `raksasa`, run:
 ./scripts/run_translation_batch.sh
 ```
 
-That script translates up to `EUSEBIUS_TRANSLATION_LIMIT` passages, regenerates
-the site, and deploys the static output. It requires `OPENAI_API_KEY` or a
-readable `~/.openai.key` for the `eusebius` service user.
+That script defaults to cleanup mode, processes up to
+`EUSEBIUS_TRANSLATION_LIMIT` passages, regenerates the site, and deploys the
+static output. It requires `OPENAI_API_KEY` or a readable `~/.openai.key` for
+the `eusebius` service user.
 
 # Daily
 

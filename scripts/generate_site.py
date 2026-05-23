@@ -111,10 +111,11 @@ def fetch_rows(conn: psycopg.Connection) -> list[dict]:
                greek_word_count, english_word_count,
                COALESCE(tr.english_translation, '') AS ai_english_translation,
                COALESCE(tr.model, '') AS ai_translation_model,
+               COALESCE(tr.prompt_version, '') AS ai_translation_prompt_version,
                tr.completed_at AS ai_translation_completed_at
         FROM passages
         LEFT JOIN LATERAL (
-            SELECT english_translation, model, completed_at
+            SELECT english_translation, model, prompt_version, completed_at
             FROM ai_translation_runs
             WHERE ai_translation_runs.passage_id = passages.passage_id
               AND ai_translation_runs.status = 'completed'
@@ -145,7 +146,8 @@ def fetch_rows(conn: psycopg.Connection) -> list[dict]:
             "english_word_count": row[7],
             "ai_english_translation": row[8],
             "ai_translation_model": row[9],
-            "ai_translation_completed_at": row[10],
+            "ai_translation_prompt_version": row[10],
+            "ai_translation_completed_at": row[11],
         }
         for row in rows
     ]
@@ -252,7 +254,7 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
       The site is generated from PostgreSQL on <code>raksasa</code> and published statically to <code>merah</code>.</p>
       <dl>
         <dt>Passages</dt><dd>{len(rows)}</dd>
-        <dt>Clean translations</dt><dd>{translated_count}</dd>
+        <dt>Clean English texts</dt><dd>{translated_count}</dd>
         <dt>Greek words</dt><dd>{sum(row["greek_word_count"] for row in rows)}</dd>
         <dt>Source</dt><dd><a href="{html.escape(source.get("source_url", "#"))}">{html.escape(source.get("cts_urn", ""))}</a></dd>
         <dt>Edition</dt><dd>{html.escape(source.get("edition_note", ""))}</dd>
@@ -290,8 +292,15 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
             if completed_at:
                 completed_at = completed_at.astimezone(UTC).strftime("%Y-%m-%d")
             completed_suffix = f", {completed_at}" if completed_at else ""
+            prompt_version = row["ai_translation_prompt_version"]
+            if prompt_version.startswith("english-cleanup"):
+                label = "AI English cleanup"
+            elif prompt_version.startswith("greek-translation"):
+                label = "AI Greek translation"
+            else:
+                label = "AI English text"
             translation_html = f"""
-              <p class="translation-meta">AI translation, {html.escape(row["ai_translation_model"])}{completed_suffix}</p>
+              <p class="translation-meta">{label}, {html.escape(row["ai_translation_model"])}{completed_suffix}</p>
               <p>{html.escape(row["ai_english_translation"])}</p>
             """
         else:
@@ -304,7 +313,7 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
               </details>
                 """
             translation_html = f"""
-              <p class="note">No clean AI translation has been generated for this passage yet.</p>
+              <p class="note">No clean AI English text has been generated for this passage yet.</p>
               {source_reference}
             """
         passage_items.append(

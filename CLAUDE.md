@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run daily analysis: `./cronscript.sh`
 - Import First1KGreek into PostgreSQL: `uv run python scripts/import_first1k.py`
 - Generate the static site without deploying: `uv run python scripts/generate_site.py`
-- Run a capped translation batch: `uv run python scripts/translate_passages.py --limit 5`
+- Run a capped English cleanup batch: `uv run python scripts/translate_passages.py --mode cleanup --limit 100`
+- Run a capped fresh translation batch: `uv run python scripts/translate_passages.py --mode translate --limit 3`
 
 ## Code Style Guidelines
 - Use snake_case for function and variable names
@@ -27,6 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Database: PostgreSQL (`eusebius` on `raksasa`) is canonical
 - Static output: `eusebius_site/`
 - First1K English is rough OCR/alignment reference text, not the clean public translation
+- Use `gpt-5.4-mini` for rough-English cleanup only, with Greek and English both in the prompt
+- Use `gpt-5.5` for real Greek translation, with a 10,000-token daily budget
 - Bulk generated comic images should not be committed to Git; store originals under `/home/eusebius/eusebius-comic/` on `raksasa`
 
 ## Testing

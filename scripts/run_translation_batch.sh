@@ -7,12 +7,12 @@ cd "$ROOT"
 mkdir -p logs
 
 : "${EUSEBIUS_DATABASE_URL:=postgresql:///eusebius}"
-: "${EUSEBIUS_TRANSLATION_MODEL:=gpt-5.4-mini}"
-: "${EUSEBIUS_TRANSLATION_LIMIT:=5}"
+: "${EUSEBIUS_TRANSLATION_MODE:=cleanup}"
+: "${EUSEBIUS_TRANSLATION_LIMIT:=100}"
 
 uv run python scripts/translate_passages.py \
   --database-url "$EUSEBIUS_DATABASE_URL" \
-  --model "$EUSEBIUS_TRANSLATION_MODEL" \
+  --mode "$EUSEBIUS_TRANSLATION_MODE" \
   --limit "$EUSEBIUS_TRANSLATION_LIMIT" \
   >> logs/translate_passages.log 2>&1
 

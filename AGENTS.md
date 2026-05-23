@@ -8,6 +8,8 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - Run daily analysis: `./cronscript.sh`
 - Import First1KGreek into PostgreSQL: `uv run python scripts/import_first1k.py`
 - Generate the static site without deploying: `uv run python scripts/generate_site.py`
+- Clean rough English against Greek: `uv run python scripts/translate_passages.py --mode cleanup --limit 100`
+- Translate from Greek: `uv run python scripts/translate_passages.py --mode translate --limit 3`
 
 ## Code Style Guidelines
 - Use snake_case for function and variable names
@@ -25,6 +27,8 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - Data flow: fetch TEI → import to PostgreSQL on `raksasa` → analyze/translate/plan → generate website → deploy static output to `merah`
 - Database: PostgreSQL (`eusebius` on `raksasa`) is canonical
 - Static output: `eusebius_site/`
+- Use `gpt-5.4-mini` only for rough-English cleanup when both Greek and English are supplied
+- Use `gpt-5.5` for real Greek translation, with a 10,000-token daily budget
 - Bulk generated comic images should not be committed to Git; store originals under `/home/eusebius/eusebius-comic/` on `raksasa`
 
 ## Testing
