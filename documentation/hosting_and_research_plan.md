@@ -20,7 +20,7 @@ Use the First1KGreek TEI files for Eusebius, `Historia Ecclesiastica`:
 - Greek edition URN: `urn:cts:greekLit:tlg2018.tlg002.1st1K-grc1`
 - Repository path: `OpenGreekAndLatin/First1KGreek/data/tlg2018/tlg002`
 
-This is better than the current local placeholder because it is structured TEI, reproducible, and small enough to import cheaply. The current `description_of_greece.txt` is not usable Eusebius content and should be treated as obsolete.
+This replaced the original local placeholder because it is structured TEI, reproducible, and small enough to import cheaply.
 
 ## Hosting Audit
 
@@ -83,12 +83,12 @@ The first pipeline is deliberately small:
   - fetches Greek and English First1KGreek TEI;
   - caches raw XML under `data/raw/`;
   - creates PostgreSQL tables from `scripts/init_db.sql`;
-  - imports book/chapter/paragraph passages;
+  - imports book/chapter/paragraph passages and skips title/book-marker paragraphs;
   - stores source URL, CTS URN, SHA-256, byte size, and fetch timestamp.
 - `scripts/generate_site.py`
   - reads PostgreSQL;
   - writes a static status site;
-  - publishes corpus counts, book-level counts, top Greek terms, sample passages, and the research agenda;
+  - publishes corpus counts, book-level counts, top Greek terms, sample passages, clean AI translations when available, and the research agenda;
   - does not call OpenAI.
 - `scripts/run_pipeline.sh`
   - attempts `git pull --ff-only` and logs any pull failure without blocking the no-OpenAI rebuild;
@@ -123,8 +123,8 @@ These are meant to stay explainable: start with transparent features, networks, 
 ## Next Work Items
 
 1. Commit and push the PostgreSQL/static-pipeline changes.
-2. Add the translation/comic planning pipeline described in `documentation/translation_and_comic_pipeline.md`.
-3. Replace or remove the obsolete Pausanias-derived scripts once the PostgreSQL importer/site generator are stable.
+2. Enable the capped translation cron after an OpenAI API key is configured for the `eusebius` service user.
+3. Add the comic planning pipeline described in `documentation/translation_and_comic_pipeline.md`.
 4. Add a no-OpenAI place extraction pass:
    - start from ToposText tagged-place counts as a comparison target;
    - add Wikidata/Pleiades lookups only for high-confidence city/place strings;

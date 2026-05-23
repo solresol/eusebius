@@ -4,8 +4,8 @@ Digital humanities and explainable NLP tools for Eusebius of Caesarea.
 
 The current baseline imports Eusebius' *Historia Ecclesiastica* from
 OpenGreekAndLatin First1KGreek TEI into PostgreSQL on `raksasa`, generates a
-small static site, and deploys it to `merah`. The default pipeline does not call
-OpenAI.
+small static site, and deploys it to `merah`. The default import/site pipeline
+does not call OpenAI.
 
 # Tooling
 
@@ -38,6 +38,32 @@ To run a smoke test:
 ```bash
 uv run python scripts/import_first1k.py --limit-books 1
 ```
+
+The First1K English file is retained as a rough comparison source only. It has
+OCR and alignment problems, so the public site prefers translations stored in
+`ai_translation_runs` and labels the First1K English as rough reference text.
+
+# Translation
+
+To generate a capped batch of clean translations:
+
+```bash
+uv run python scripts/translate_passages.py --limit 5
+```
+
+The default model is `gpt-5.4-mini`, configurable with
+`EUSEBIUS_TRANSLATION_MODEL`. Runs are stored in PostgreSQL with model, prompt
+version, token counts, status, and error messages.
+
+For cron use on `raksasa`, run:
+
+```bash
+./scripts/run_translation_batch.sh
+```
+
+That script translates up to `EUSEBIUS_TRANSLATION_LIMIT` passages, regenerates
+the site, and deploys the static output. It requires `OPENAI_API_KEY` or a
+readable `~/.openai.key` for the `eusebius` service user.
 
 # Daily
 

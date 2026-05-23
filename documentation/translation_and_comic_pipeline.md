@@ -7,12 +7,14 @@ Date: 2026-04-25
 Use the best available model for the translation and planning work, but keep
 the model names configurable rather than hard-coded:
 
+- `EUSEBIUS_TRANSLATION_MODEL=gpt-5.4-mini`
 - `EUSEBIUS_TEXT_MODEL=gpt-5.4`
 - `EUSEBIUS_TEXT_MODEL_HIGH=gpt-5.4`
 - `EUSEBIUS_IMAGE_MODEL=gpt-image-2`
 
-Use the text model for daily translation and comic planning. If a cheaper
-model is later good enough for simple passages, make that an explicit
+Use the mini translation model for capped daily translation cleanup, and keep
+the higher text model available for comic planning or harder passages. If a
+cheaper model is later good enough for simple passages, make that an explicit
 configuration change rather than lowering quality silently.
 
 ## Daily Translation
@@ -23,8 +25,9 @@ cost bounded.
 Default policy:
 
 - Process 3-5 passages per day.
-- Translate from `passages.greek_text`; use the First1K aligned English only as
-  an internal comparison/reference field, not as the published translation.
+- Translate from `passages.greek_text`; use the First1K English only as a rough
+  comparison/reference field, not as the published translation. It contains OCR
+  errors and can be misaligned around title matter.
 - Store every run in `ai_translation_runs` with model, prompt version, token
   counts, status, errors, and completion time.
 - Do not overwrite translations silently; a new prompt/model gets a new row.

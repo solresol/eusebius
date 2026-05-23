@@ -5,6 +5,7 @@
 \title{Digital Analysis of Eusebius}
 \author{COMP3420 Documentation}
 \date{\today}
+
 \begin{document}
 \begin{frame}
   \titlepage
@@ -12,58 +13,45 @@
 
 \begin{frame}{Project Overview}
   \begin{itemize}
-    \item Eusebius' \emph{Description of Greece} (2nd~c.~CE) mixes myth and travelogue.
-    \item Scholars debate how critically Eusebius reports local traditions.
-    \item This project provides tools to analyse the text using modern NLP.
-    \item Pipeline: import \textrightarrow{} annotate \textrightarrow{} model \textrightarrow{} visualise.
+    \item The corpus is Eusebius of Caesarea's \emph{Historia Ecclesiastica}.
+    \item The source text is OpenGreekAndLatin First1KGreek TEI.
+    \item PostgreSQL on \texttt{raksasa} is the canonical store.
+    \item The public site is static HTML deployed to \texttt{merah}.
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Data Ingestion}
   \begin{itemize}
-    \item Raw text segmented as passages with IDs (e.g., \texttt{1.1.1}).
-    \item \texttt{eusebius\_importer.py} loads passages into a SQLite database.
-    \item \texttt{translate\_eusebius.py} uses the OpenAI API to produce English translations.
+    \item \texttt{scripts/import\_first1k.py} fetches Greek and English TEI.
+    \item The importer stores source metadata, passages, word counts, and canonical references.
+    \item Title pages and book markers are not treated as passage text.
+    \item The First1K English is kept as a rough reference, not a clean public translation.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Proper Noun Extraction}
+\begin{frame}{Static Site}
   \begin{itemize}
-    \item \texttt{extract\_proper\_nouns.py} queries the API with tool calls to identify people, places, and deities.
-    \item Results stored with entity type and canonical form.
-    \item These nouns act as stopwords and later form a co--occurrence network.
+    \item \texttt{scripts/generate\_site.py} reads from PostgreSQL.
+    \item The site reports corpus scale, book-level counts, top Greek terms, and sample passages.
+    \item Clean AI translations are shown when available.
+    \item Rough First1K English appears only as a labelled reference source.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Machine Learning Models}
+\begin{frame}{Translation Pipeline}
   \begin{itemize}
-    \item Logistic regression models are built using \texttt{scikit\-learn}.
-    \item COMP3420 students will recognise this pipeline of vectorisation and classification.
+    \item \texttt{scripts/translate\_passages.py} can translate a capped batch through OpenAI.
+    \item Runs are stored in \texttt{ai\_translation\_runs} with model, prompt version, token counts, status, and errors.
+    \item The default daily model is configurable with \texttt{EUSEBIUS\_TRANSLATION\_MODEL}.
+    \item The intended cheap default is \texttt{gpt-5.4-mini}.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Network Analysis}
+\begin{frame}{Research Direction}
   \begin{itemize}
-    \item \texttt{analyse\_noun\_network.py} constructs a graph with NetworkX.
-    \item Nodes: proper nouns; edges: co--occurrence in passages.
-    \item Centrality metrics (degree, betweenness, PageRank) reveal key figures like Apollo or Athens.
-    \item Output visualisations use D3.js in an interactive web page.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Website Generation}
-  \begin{itemize}
-    \item Modular code in \texttt{website/} creates a static site showing analyses.
-    \item Passages are highlighted with predictive words, translated text, and lists of proper nouns.
-    \item \texttt{cronscript.sh} can run the entire pipeline daily and sync results to a server.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Takeaways}
-  \begin{itemize}
-    \item Combines classical scholarship with modern NLP methods you know from scikit--learn and Keras.
-    \item Encourages reflection on how language shapes interpretation of ancient texts.
-    \item Code is modular and can be adapted for other corpora or further analyses.
+    \item Start with explainable features: counts, co-occurrence, source labels, and transparent networks.
+    \item Use LLM calls only for bounded translation, planning, and later documentary-comic work.
+    \item Keep generated images and other bulky artifacts out of Git.
   \end{itemize}
 \end{frame}
 

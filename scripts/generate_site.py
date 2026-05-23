@@ -108,9 +108,21 @@ def fetch_rows(conn: psycopg.Connection) -> list[dict]:
         """
         SELECT canonical_ref, book, chapter, paragraph_index,
                greek_text, COALESCE(english_text, '') AS english_text,
-               greek_word_count, english_word_count
+               greek_word_count, english_word_count,
+               COALESCE(tr.english_translation, '') AS ai_english_translation,
+               COALESCE(tr.model, '') AS ai_translation_model,
+               tr.completed_at AS ai_translation_completed_at
         FROM passages
-        ORDER BY book::int NULLS LAST, chapter, paragraph_index
+        LEFT JOIN LATERAL (
+            SELECT english_translation, model, completed_at
+            FROM ai_translation_runs
+            WHERE ai_translation_runs.passage_id = passages.passage_id
+              AND ai_translation_runs.status = 'completed'
+              AND ai_translation_runs.english_translation IS NOT NULL
+            ORDER BY completed_at DESC NULLS LAST, translation_run_id DESC
+            LIMIT 1
+        ) AS tr ON TRUE
+        ORDER BY book::int NULLS LAST, chapter::int NULLS LAST, paragraph_index
         """
     ).fetchall()
     return [
@@ -123,6 +135,9 @@ def fetch_rows(conn: psycopg.Connection) -> list[dict]:
             "english_text": row[5],
             "greek_word_count": row[6],
             "english_word_count": row[7],
+            "ai_english_translation": row[8],
+            "ai_translation_model": row[9],
+            "ai_translation_completed_at": row[10],
         }
         for row in rows
     ]
@@ -196,6 +211,7 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
         token_counts.update(greek_tokens(row["greek_text"]))
         book_word_counts[row["book"]] += row["greek_word_count"]
         chapter_counts[row["book"]] += 1
+    translated_count = sum(1 for row in rows if row["ai_english_translation"])
 
     top_terms = token_counts.most_common(100)
     write_text(
@@ -228,6 +244,7 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
       The site is generated from PostgreSQL on <code>raksasa</code> and published statically to <code>merah</code>.</p>
       <dl>
         <dt>Passages</dt><dd>{len(rows)}</dd>
+        <dt>Clean translations</dt><dd>{translated_count}</dd>
         <dt>Greek words</dt><dd>{sum(row["greek_word_count"] for row in rows)}</dd>
         <dt>Source</dt><dd><a href="{html.escape(source.get("source_url", "#"))}">{html.escape(source.get("cts_urn", ""))}</a></dd>
         <dt>Edition</dt><dd>{html.escape(source.get("edition_note", ""))}</dd>
@@ -260,12 +277,34 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
 
     passage_items = []
     for row in rows[:250]:
+        if row["ai_english_translation"]:
+            completed_at = row["ai_translation_completed_at"]
+            if completed_at:
+                completed_at = completed_at.astimezone(UTC).strftime("%Y-%m-%d")
+            completed_suffix = f", {completed_at}" if completed_at else ""
+            translation_html = f"""
+              <p class="translation-meta">AI translation, {html.escape(row["ai_translation_model"])}{completed_suffix}</p>
+              <p>{html.escape(row["ai_english_translation"])}</p>
+            """
+        else:
+            source_reference = ""
+            if row["english_text"]:
+                source_reference = f"""
+              <details>
+                <summary>First1K English reference (rough OCR/alignment source)</summary>
+                <p>{html.escape(row["english_text"])}</p>
+              </details>
+                """
+            translation_html = f"""
+              <p class="note">No clean AI translation has been generated for this passage yet.</p>
+              {source_reference}
+            """
         passage_items.append(
             f"""
             <article class="passage" id="p-{html.escape(row["canonical_ref"])}">
               <h2>{html.escape(row["canonical_ref"])}</h2>
               <p lang="grc">{html.escape(row["greek_text"])}</p>
-              <p>{html.escape(row["english_text"] or "No aligned English text imported for this paragraph.")}</p>
+              {translation_html}
             </article>
             """
         )
@@ -301,6 +340,9 @@ th, td { border: 1px solid #d7d2c8; padding: .45rem .6rem; text-align: left; }
 .terms { columns: 2; }
 .terms li { break-inside: avoid; }
 .passage p[lang="grc"] { font-size: 1.08rem; }
+.translation-meta { color: #5a646d; font-size: .92rem; margin-bottom: -.25rem; }
+details { background: #fff; border: 1px solid #d7d2c8; padding: .65rem .8rem; }
+summary { cursor: pointer; font-weight: 700; }
 .note { color: #5a646d; }
 @media (max-width: 680px) {
   dl { grid-template-columns: 1fr; }

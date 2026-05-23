@@ -3,9 +3,12 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Build and Run Commands
-- Run a script: `python script_name.py`
-- Run with limited processing: `python script_name.py --stop=N` (process N items)
+- Run a script: `uv run python script_name.py`
+- Run with limited processing when supported: `uv run python script_name.py --stop=N` or `--limit-books=N`
 - Run daily analysis: `./cronscript.sh`
+- Import First1KGreek into PostgreSQL: `uv run python scripts/import_first1k.py`
+- Generate the static site without deploying: `uv run python scripts/generate_site.py`
+- Run a capped translation batch: `uv run python scripts/translate_passages.py --limit 5`
 
 ## Code Style Guidelines
 - Use snake_case for function and variable names
@@ -17,13 +20,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Dependencies
 - Use `uv` for dependency management
-- Core dependencies: matplotlib, networkx, numpy, openai, pandas, scikit-learn, tqdm
+- Core dependencies: matplotlib, networkx, numpy, openai, pandas, psycopg, scikit-learn, tqdm
 
 ## Project Structure
-- Data flow: import → extract → analyze → visualize → generate website
-- Database: SQLite (eusebius.sqlite)
-- Network analysis outputs feed into website generation
+- Data flow: fetch TEI → import to PostgreSQL on `raksasa` → analyze/translate/plan → generate website → deploy static output to `merah`
+- Database: PostgreSQL (`eusebius` on `raksasa`) is canonical
+- Static output: `eusebius_site/`
+- First1K English is rough OCR/alignment reference text, not the clean public translation
+- Bulk generated comic images should not be committed to Git; store originals under `/home/eusebius/eusebius-comic/` on `raksasa`
 
 ## Testing
 - Add tests in a "tests" directory if implementing new features
-- Test with limited data using the --stop parameter
+- Test with limited data using the `--stop`, `--stop-after`, `--limit`, or `--limit-books` parameter where available

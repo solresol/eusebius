@@ -65,6 +65,12 @@ def clean_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
+def is_title_matter(value: str) -> bool:
+    """Return true for title/book-marker paragraphs, not text passages."""
+    text = clean_text(value)
+    return bool(text and len(text) <= 80 and text.isupper())
+
+
 def word_count(value: str) -> int:
     return len(re.findall(r"\w+", value, flags=re.UNICODE))
 
@@ -112,7 +118,7 @@ def parse_passages(xml_bytes: bytes, *, limit_books: int | None = None) -> list[
             paragraph_index = 0
             for paragraph in chapter.findall("./tei:p", NS):
                 text = direct_child_text(paragraph)
-                if not text:
+                if not text or is_title_matter(text):
                     continue
                 paragraph_index += 1
                 canonical_ref = f"{book_n}.{chapter_n}.{paragraph_index}"
@@ -221,6 +227,27 @@ def import_passages(
                     word_count(english_text),
                 ),
             )
+        new_refs = [passage.canonical_ref for passage in greek_passages]
+        conn.execute(
+            """
+            DELETE FROM passages AS p
+            WHERE p.work_id = %s
+              AND NOT (p.canonical_ref = ANY(%s))
+              AND NOT EXISTS (
+                  SELECT 1 FROM ai_translation_runs AS r
+                  WHERE r.passage_id = p.passage_id
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM comic_candidates AS c
+                  WHERE c.passage_id = p.passage_id
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM comic_plans AS cp
+                  WHERE cp.passage_id = p.passage_id
+              )
+            """,
+            (WORK_ID, new_refs),
+        )
     return len(greek_passages)
 
 
