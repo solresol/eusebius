@@ -76,6 +76,29 @@ That script defaults to cleanup mode, processes up to
 static output. It requires `OPENAI_API_KEY` or a readable
 `~/.openai.eusebius.key` for the `eusebius` service user.
 
+# Comic Candidate Scoring
+
+To populate the first documentary-comic backlog table without using model
+tokens:
+
+```bash
+uv run python scripts/score_comic_candidates.py
+```
+
+The scorer uses deterministic, explainable features from the passage English
+and stores qualifying rows in `comic_candidates`. It does not create plans or
+image prompts; those remain a later, source-grounded planning step.
+
+To let the text model turn at most one candidate into a stored panel backlog:
+
+```bash
+uv run python scripts/plan_comic_panels.py --limit 1
+```
+
+The planner reads the highest-scored unplanned candidate, asks for structured
+JSON, stores accepted plans in `comic_plans`, and inserts queued prompts in
+`comic_panels`. It does not render images.
+
 # Daily
 
 The scheduled pipeline is intentionally cheap:

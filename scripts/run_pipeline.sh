@@ -18,6 +18,10 @@ uv run python scripts/import_first1k.py \
   --database-url "$EUSEBIUS_DATABASE_URL" \
   >> logs/import_first1k.log 2>&1
 
+uv run python scripts/score_comic_candidates.py \
+  --database-url "$EUSEBIUS_DATABASE_URL" \
+  >> logs/score_comic_candidates.log 2>&1
+
 uv run python scripts/generate_site.py \
   --database-url "$EUSEBIUS_DATABASE_URL" \
   --output-dir eusebius_site \

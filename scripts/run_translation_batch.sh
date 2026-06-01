@@ -16,6 +16,15 @@ uv run python scripts/translate_passages.py \
   --limit "$EUSEBIUS_TRANSLATION_LIMIT" \
   >> logs/translate_passages.log 2>&1
 
+uv run python scripts/score_comic_candidates.py \
+  --database-url "$EUSEBIUS_DATABASE_URL" \
+  >> logs/score_comic_candidates.log 2>&1
+
+uv run python scripts/plan_comic_panels.py \
+  --database-url "$EUSEBIUS_DATABASE_URL" \
+  --limit "${EUSEBIUS_COMIC_PLAN_LIMIT:-1}" \
+  >> logs/plan_comic_panels.log 2>&1
+
 uv run python scripts/generate_site.py \
   --database-url "$EUSEBIUS_DATABASE_URL" \
   --output-dir eusebius_site \
