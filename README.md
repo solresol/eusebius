@@ -97,7 +97,9 @@ uv run python scripts/plan_comic_panels.py --limit 1
 
 The planner reads the highest-scored unplanned candidate, asks for structured
 JSON, stores accepted plans in `comic_plans`, and inserts queued prompts in
-`comic_panels`. It does not render images.
+`comic_panels`. It does not render images. Panel prompts may include short
+readable labels or captions when they make the comic understandable, but should
+avoid long text blocks and invented dialogue.
 
 # Daily
 
@@ -121,3 +123,7 @@ uv run python scripts/generate_site.py
 The output is written to `eusebius_site/`.
 The passage browser writes lightweight book and section index pages; full
 passage text is only loaded on a single section page.
+
+Planned site work now includes a comic-book viewer, PNG web derivatives under
+`comic/`, a daily comic-book PDF, and clean weekly Greek/English side-by-side
+pages.

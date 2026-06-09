@@ -77,8 +77,12 @@ The plan should include:
 - one-sentence documentary framing;
 - 2-6 panels;
 - panel-by-panel visual prompts;
-- captions that are short enough to add locally after image generation;
-- no reliance on the image model rendering long Greek or English text;
+- captions that are short enough to display in the viewer and, when useful,
+  render directly in the generated artwork;
+- short readable labels, captions, map callouts, or title text are allowed when
+  they make the panel intelligible;
+- no reliance on the image model rendering long Greek or English passages,
+  dense paragraphs, or invented dialogue;
 - continuity hints for costume, era, palette, page layout, and map/document
   inset style.
 
@@ -113,7 +117,8 @@ Canonical non-Git storage on `raksasa`:
 ```text
 /home/eusebius/eusebius-comic/
   originals/<plan_id>/<panel_number>.png
-  web/<plan_id>/<panel_number>.webp
+  web/<plan_id>/<panel_number>.png
+  pdf/eusebius-comic-YYYY-MM-DD.pdf
   manifests/<plan_id>.json
 ```
 
@@ -121,7 +126,8 @@ Repository storage:
 
 - Store prompts, metadata, scripts, and generated site pages in Git.
 - Do not store bulk images in Git.
-- Publish optimized WebP/JPEG derivatives into `eusebius_site/comic/`.
+- Publish optimized PNG derivatives into `eusebius_site/comic/`.
+- Publish a daily generated comic-book PDF into `eusebius_site/comic/`.
 
 PostgreSQL:
 
@@ -158,7 +164,13 @@ Keep responsibilities separate:
   - render at most one queued comic panel per run using Codex image generation,
     not a repo script that calls the image API directly;
   - save the image to `raksasa`;
+  - convert the website derivative to PNG, not WebP;
   - update PostgreSQL asset metadata;
+  - copy new PNG derivatives to the public `comic/` tree;
+  - rebuild and publish the daily comic-book PDF;
+  - check the source translation for the rendered passage and make small,
+    source-grounded corrections when a mistranslation or confusing wording is
+    evident, recording provenance in `ai_translation_runs`;
   - sync to S3 only when `EUSEBIUS_COMIC_S3_URI` is configured.
 
 The image automation should not invent new panels. It should only consume
@@ -166,3 +178,15 @@ queued `comic_panels` rows.
 
 The repo should therefore contain the queue, prompts, storage helpers, and
 metadata update scripts, but not a programmatic image-generation API client.
+
+## Website Outputs
+
+The static website should include:
+
+- a comic-book viewer that groups rendered panels by `comic_plan_id`, shows the
+  generated image, title, caption, passage reference, and source translation,
+  and makes it easy to move through the book in order;
+- a current daily PDF export of the comic book;
+- clean weekly Greek/English pages with side-by-side passage text, preferring
+  reviewed AI translations when available and clearly labelling rough reference
+  English when that is all the database has.

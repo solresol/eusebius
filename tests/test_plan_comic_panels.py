@@ -17,8 +17,8 @@ class PlanComicPanelsTests(unittest.TestCase):
                         "panel_number": 2,
                         "panel_title": "Delivery",
                         "panel_prompt": (
-                            "A courier delivers a sealed letter to bishops; "
-                            "no readable text, no captions, no speech balloons."
+                            "A courier delivers a sealed letter to bishops, "
+                            "with a short caption naming the churches."
                         ),
                         "caption": "The letter arrives.",
                     },
@@ -26,8 +26,8 @@ class PlanComicPanelsTests(unittest.TestCase):
                         "panel_number": 1,
                         "panel_title": "Writing",
                         "panel_prompt": (
-                            "A bishop dictates beside a manuscript desk; "
-                            "no readable text, no captions, no speech balloons."
+                            "A bishop dictates beside a manuscript desk, "
+                            "with a concise title label in the panel."
                         ),
                         "caption": "A document is prepared.",
                     },

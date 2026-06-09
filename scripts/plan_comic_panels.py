@@ -307,8 +307,10 @@ def create_plan(
         "Caesarea's Historia Ecclesiastica. Accept only passages with concrete "
         "visual documentary value. Reject abstract theology, repetitive lists, "
         "and passages that cannot be drawn without inventing events. For accepted "
-        "plans, write image prompts for captionless artwork: no long Greek or "
-        "English text, no speech balloons, no readable paragraphs. Use visual "
+        "plans, write image prompts for comic panels that can include short, "
+        "legible, source-grounded labels, captions, map callouts, or title text "
+        "inside the image when that helps the panel make sense. Avoid long Greek "
+        "or English passages, dense paragraphs, and invented dialogue. Use visual "
         "historical cues, manuscripts, maps, bishops, imperial officials, travel, "
         "courtroom, prison, council, or letter-delivery imagery only when grounded "
         "in the source text. Return JSON only."
@@ -320,9 +322,11 @@ def create_plan(
         f"Greek source text:\n{candidate['greek_text']}\n\n"
         f"English source text:\n{source_english}\n\n"
         "Return a JSON object. If accepted, create 2 to 4 panels. Each "
-        "panel_prompt must be detailed enough for an image model and must include "
-        "the instruction: no readable text, no captions, no speech balloons. "
-        "Captions should be short labels to add outside the image later."
+        "panel_prompt must be detailed enough for an image model. It may include "
+        "short readable labels or captions inside the artwork when they clarify "
+        "the scene, but it must not ask for long blocks of text or invented "
+        "speech. Captions should still be concise so they can also be displayed "
+        "outside the image in the comic viewer."
     )
     response = client.responses.create(
         model=model,
