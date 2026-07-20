@@ -124,6 +124,7 @@ The output is written to `eusebius_site/`.
 The passage browser writes lightweight book and section index pages; full
 passage text is only loaded on a single section page.
 
-Planned site work now includes a comic-book viewer, PNG web derivatives under
-`comic/`, a daily comic-book PDF, and clean weekly Greek/English side-by-side
-pages.
+Rendered documentary-comic panels are published from the canonical derivatives
+on `raksasa` into `comic/` and listed in `comics.html` with their captions,
+passage references, and source English. Planned site work still includes a
+daily comic-book PDF and clean weekly Greek/English side-by-side pages.

@@ -117,7 +117,7 @@ Canonical non-Git storage on `raksasa`:
 ```text
 /home/eusebius/eusebius-comic/
   originals/<plan_id>/<panel_number>.png
-  web/<plan_id>/<panel_number>.png
+  web/<plan_id>/<panel_number>.webp
   pdf/eusebius-comic-YYYY-MM-DD.pdf
   manifests/<plan_id>.json
 ```
@@ -126,7 +126,7 @@ Repository storage:
 
 - Store prompts, metadata, scripts, and generated site pages in Git.
 - Do not store bulk images in Git.
-- Publish optimized PNG derivatives into `eusebius_site/comic/`.
+- Publish optimized WebP derivatives into `eusebius_site/comic/`.
 - Publish a daily generated comic-book PDF into `eusebius_site/comic/`.
 
 PostgreSQL:
@@ -164,9 +164,9 @@ Keep responsibilities separate:
   - render at most one queued comic panel per run using Codex image generation,
     not a repo script that calls the image API directly;
   - save the image to `raksasa`;
-  - convert the website derivative to PNG, not WebP;
+  - convert the website derivative to WebP;
   - update PostgreSQL asset metadata;
-  - copy new PNG derivatives to the public `comic/` tree;
+  - let static-site generation copy WebP derivatives to the public `comic/` tree;
   - rebuild and publish the daily comic-book PDF;
   - check the source translation for the rendered passage and make small,
     source-grounded corrections when a mistranslation or confusing wording is

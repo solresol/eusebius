@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import unicodedata
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
@@ -88,6 +89,14 @@ def parse_args() -> argparse.Namespace:
         "--output-dir",
         default="eusebius_site",
         help="Directory to write static site files",
+    )
+    parser.add_argument(
+        "--comic-web-dir",
+        default=os.environ.get(
+            "EUSEBIUS_COMIC_WEB_DIR",
+            "/home/eusebius/eusebius-comic/web",
+        ),
+        help="Directory containing optimized comic derivatives by plan/panel",
     )
     return parser.parse_args()
 
@@ -222,6 +231,64 @@ def fetch_source(conn: psycopg.Connection) -> dict:
     }
 
 
+def fetch_comic_rows(conn: psycopg.Connection) -> list[dict]:
+    """Fetch rendered panels and their source/provenance for the comic viewer."""
+    rows = conn.execute(
+        """
+        SELECT cp.comic_plan_id, cp.title, cp.summary,
+               p.panel_number, p.panel_title, p.caption,
+               a.public_path, a.model, a.sha256,
+               pa.canonical_ref, pa.book, pa.chapter,
+               COALESCE(tr.english_translation, pa.english_text, '') AS english_text,
+               COALESCE(tr.model, '') AS translation_model,
+               COALESCE(tr.prompt_version, '') AS translation_prompt_version
+        FROM comic_plans cp
+        JOIN comic_panels p USING (comic_plan_id)
+        JOIN passages pa USING (passage_id)
+        JOIN LATERAL (
+            SELECT public_path, model, sha256
+            FROM comic_image_assets
+            WHERE comic_image_assets.comic_panel_id = p.comic_panel_id
+              AND comic_image_assets.status = 'generated'
+              AND comic_image_assets.public_path IS NOT NULL
+            ORDER BY comic_image_asset_id DESC
+            LIMIT 1
+        ) a ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT english_translation, model, prompt_version
+            FROM ai_translation_runs
+            WHERE ai_translation_runs.passage_id = pa.passage_id
+              AND ai_translation_runs.status = 'completed'
+              AND ai_translation_runs.english_translation IS NOT NULL
+            ORDER BY completed_at DESC NULLS LAST, translation_run_id DESC
+            LIMIT 1
+        ) tr ON TRUE
+        WHERE p.status = 'rendered'
+        ORDER BY cp.comic_plan_id, p.panel_number
+        """
+    ).fetchall()
+    return [
+        {
+            "comic_plan_id": row[0],
+            "plan_title": row[1],
+            "plan_summary": row[2],
+            "panel_number": row[3],
+            "panel_title": row[4],
+            "caption": row[5],
+            "public_path": row[6],
+            "image_model": row[7],
+            "image_sha256": row[8],
+            "canonical_ref": row[9],
+            "book": row[10],
+            "chapter": row[11],
+            "english_text": row[12],
+            "translation_model": row[13],
+            "translation_prompt_version": row[14],
+        }
+        for row in rows
+    ]
+
+
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -242,6 +309,7 @@ def render_page(title: str, body: str) -> str:
     <nav>
       <a href="index.html">Status</a>
       <a href="passages.html">Passages</a>
+      <a href="comics.html">Documentary Comic</a>
       <a href="research.html">Research Questions</a>
       <a href="data/top_terms.json">Data</a>
     </nav>
@@ -413,7 +481,114 @@ def render_passage_browser(output_dir: Path, rows: list[dict]) -> None:
         )
 
 
-def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
+def comic_public_relative_path(public_path: str) -> Path:
+    """Return a safe site-relative path for a stored comic public path."""
+    if not public_path.startswith("/comic/"):
+        raise ValueError(f"Comic public path must start with /comic/: {public_path}")
+    relative_path = Path(public_path.removeprefix("/"))
+    if ".." in relative_path.parts:
+        raise ValueError(f"Comic public path may not contain '..': {public_path}")
+    return relative_path
+
+
+def publish_comic_images(
+    output_dir: Path,
+    comic_rows: list[dict],
+    comic_web_dir: Path,
+) -> list[dict]:
+    """Copy available derivatives into the static tree and return published rows."""
+    published_rows = []
+    for row in comic_rows:
+        relative_path = comic_public_relative_path(row["public_path"])
+        suffix = relative_path.suffix
+        source_path = (
+            comic_web_dir
+            / str(row["comic_plan_id"])
+            / f'{row["panel_number"]}{suffix}'
+        )
+        if not source_path.is_file():
+            print(
+                f"Skipping comic panel with missing derivative: {source_path}",
+                file=sys.stderr,
+            )
+            continue
+        target_path = output_dir / relative_path
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, target_path)
+        published_rows.append(row)
+    return published_rows
+
+
+def render_comic_viewer(output_dir: Path, comic_rows: list[dict]) -> None:
+    """Write a source-linked viewer for rendered documentary-comic panels."""
+    if not comic_rows:
+        body = """
+        <section>
+          <h2>No rendered panels published yet</h2>
+          <p class="note">Panels will appear here after rendering and static-site publication.</p>
+        </section>
+        """
+        write_text(output_dir / "comics.html", render_page("Eusebius Documentary Comic", body))
+        return
+
+    plans: defaultdict[int, list[dict]] = defaultdict(list)
+    for row in comic_rows:
+        plans[row["comic_plan_id"]].append(row)
+
+    plan_sections = []
+    for plan_id, panels in plans.items():
+        first = panels[0]
+        source_href = (
+            f'{section_page_name(first["book"], first["chapter"])}'
+            f'#p-{first["canonical_ref"]}'
+        )
+        translation_note = "First1K English reference"
+        if first["translation_model"]:
+            translation_note = f'AI English text, {first["translation_model"]}'
+        panel_figures = []
+        for panel in panels:
+            panel_figures.append(
+                f"""
+                <figure class="comic-panel">
+                  <img src="{html.escape(panel["public_path"].removeprefix("/"))}"
+                       alt="{html.escape(panel["panel_title"])}" loading="lazy">
+                  <figcaption>
+                    <h3>Panel {panel["panel_number"]}: {html.escape(panel["panel_title"])}</h3>
+                    <p>{html.escape(panel["caption"])}</p>
+                    <small>Image: {html.escape(panel["image_model"])}</small>
+                  </figcaption>
+                </figure>
+                """
+            )
+        plan_sections.append(
+            f"""
+            <section class="comic-plan" id="plan-{plan_id}">
+              <h2>{html.escape(first["plan_title"])}</h2>
+              <p>{html.escape(first["plan_summary"])}</p>
+              <p class="source-ref">Source: <a href="{html.escape(source_href)}">Eusebius {html.escape(first["canonical_ref"])}</a></p>
+              <details>
+                <summary>{html.escape(translation_note)}</summary>
+                <p>{html.escape(first["english_text"])}</p>
+              </details>
+              <div class="comic-grid">{"".join(panel_figures)}</div>
+            </section>
+            """
+        )
+
+    body = f"""
+    <p class="note">A source-grounded visual edition generated from stored panel plans. Captions and source text remain outside the artwork.</p>
+    {"".join(plan_sections)}
+    """
+    write_text(output_dir / "comics.html", render_page("Eusebius Documentary Comic", body))
+
+
+def generate(
+    output_dir: Path,
+    rows: list[dict],
+    source: dict,
+    comic_rows: list[dict] | None = None,
+    comic_web_dir: Path | None = None,
+) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
     (output_dir / "assets").mkdir(parents=True)
@@ -491,6 +666,12 @@ def generate(output_dir: Path, rows: list[dict], source: dict) -> None:
     write_text(output_dir / "research.html", render_page("Eusebius Research Questions", research_body))
 
     render_passage_browser(output_dir, rows)
+    published_comic_rows = publish_comic_images(
+        output_dir,
+        comic_rows or [],
+        comic_web_dir or Path("/home/eusebius/eusebius-comic/web"),
+    )
+    render_comic_viewer(output_dir, published_comic_rows)
 
     write_text(
         output_dir / "assets" / "style.css",
@@ -539,6 +720,13 @@ th, td { border: 1px solid #d7d2c8; padding: .45rem .6rem; text-align: left; }
 details { background: #fff; border: 1px solid #d7d2c8; padding: .65rem .8rem; }
 summary { cursor: pointer; font-weight: 700; }
 .note { color: #5a646d; }
+.source-ref { font-weight: 700; }
+.comic-grid { display: grid; gap: 1.5rem; margin-top: 1.2rem; }
+.comic-panel { margin: 0; background: white; border: 1px solid #d7d2c8; }
+.comic-panel img { display: block; height: auto; width: 100%; }
+.comic-panel figcaption { padding: .8rem 1rem; }
+.comic-panel h3 { margin: 0 0 .35rem; }
+.comic-panel figcaption p { margin: 0 0 .35rem; }
 @media (max-width: 680px) {
   dl { grid-template-columns: 1fr; }
   .terms { columns: 1; }
@@ -554,7 +742,14 @@ def main() -> None:
     with psycopg.connect(args.database_url) as conn:
         rows = fetch_rows(conn)
         source = fetch_source(conn)
-    generate(Path(args.output_dir), rows, source)
+        comic_rows = fetch_comic_rows(conn)
+    generate(
+        Path(args.output_dir),
+        rows,
+        source,
+        comic_rows,
+        Path(args.comic_web_dir),
+    )
     print(f"Generated {args.output_dir} with {len(rows)} passages")
 
 
