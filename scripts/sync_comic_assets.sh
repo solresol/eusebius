@@ -1,7 +1,5 @@
 #!/bin/sh
-""":"
-Sync canonical Eusebius comic assets to the configured private S3 backup.
-":"""
+# Sync canonical Eusebius comic assets to the configured private S3 backup.
 
 set -eu
 
