@@ -148,8 +148,12 @@ S3 backup:
 Suggested command shape:
 
 ```bash
-aws s3 sync /home/eusebius/eusebius-comic/ "$EUSEBIUS_COMIC_S3_URI"/
+./scripts/sync_comic_assets.sh
 ```
+
+The service-user credentials should be restricted to the configured comic
+bucket. Keep the bucket private, enable server-side encryption and versioning,
+and expire non-current versions after a bounded retention period.
 
 ## Automations
 

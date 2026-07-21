@@ -128,3 +128,10 @@ Rendered documentary-comic panels are published from the canonical derivatives
 on `raksasa` into `comic/` and listed in `comics.html` with their captions,
 passage references, and source English. Planned site work still includes a
 daily comic-book PDF and clean weekly Greek/English side-by-side pages.
+
+Private off-host backup is configured through `EUSEBIUS_COMIC_S3_URI`. On
+`raksasa`, synchronize originals and web derivatives with:
+
+```bash
+./scripts/sync_comic_assets.sh
+```
