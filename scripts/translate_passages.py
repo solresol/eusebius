@@ -16,7 +16,7 @@ from openai import OpenAI
 
 MODE_DEFAULTS = {
     "cleanup": {
-        "model": "gpt-5.4-mini",
+        "model": "gpt-5.6-luna",
         "prompt_version": "english-cleanup-v1",
         "daily_token_budget": 500_000,
     },

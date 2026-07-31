@@ -8,13 +8,13 @@ Use the best available model for the translation and planning work, but keep
 the model names configurable rather than hard-coded:
 
 - `EUSEBIUS_TRANSLATION_MODE=cleanup`
-- cleanup mode: `gpt-5.4-mini`, 500,000 tokens/day
+- cleanup mode: `gpt-5.6-luna`, 500,000 tokens/day
 - translate mode: `gpt-5.5`, 10,000 tokens/day
 - `EUSEBIUS_TEXT_MODEL=gpt-5.4`
 - `EUSEBIUS_TEXT_MODEL_HIGH=gpt-5.4`
 - `EUSEBIUS_IMAGE_MODEL=gpt-image-2`
 
-Use `gpt-5.4-mini` only for English cleanup when the prompt includes both the
+Use `gpt-5.6-luna` only for English cleanup when the prompt includes both the
 Greek and the existing First1K English. It should fix minor OCR, spacing,
 punctuation, and alignment problems in the English, not produce a fresh
 translation. Use `gpt-5.5` for real translation from Greek, with a much tighter
