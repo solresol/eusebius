@@ -18,7 +18,7 @@ comic steps it documents.
   `translate_passages.py` or `plan_comic_panels.py`. Either wire
   `scripts/run_translation_batch.sh` and panel planning/rendering into
   `cronscript.sh`/`run_pipeline.sh` (with the documented token budgets:
-  500k/day for `gpt-5.6-luna` cleanup, 10k/day for `gpt-5.5` translation), or
+  500k/day for `gpt-5.4-mini` cleanup, 10k/day for `gpt-5.5` translation), or
   document that they run under separate cron entries. Right now the "daily"
   pipeline and the docs disagree.
 - **Pipeline steps swallow failures invisibly.** Every step redirects to a

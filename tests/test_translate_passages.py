@@ -17,7 +17,7 @@ class TranslatePassagesTests(unittest.TestCase):
             prompt_version=None,
             daily_token_budget=None,
         )
-        self.assertEqual(resolve_model(args), "gpt-5.6-luna")
+        self.assertEqual(resolve_model(args), "gpt-5.4-mini")
         self.assertEqual(resolve_prompt_version(args), "english-cleanup-v1")
         self.assertEqual(resolve_daily_token_budget(args), 500_000)
 

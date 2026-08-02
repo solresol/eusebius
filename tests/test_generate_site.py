@@ -31,7 +31,7 @@ class GenerateSiteTests(unittest.TestCase):
             "book": "8",
             "chapter": "13",
             "english_text": "A source-grounded translation.",
-            "translation_model": "gpt-5.6-luna",
+            "translation_model": "gpt-5.4-mini",
             "translation_prompt_version": "english-cleanup-v1",
         }
         with tempfile.TemporaryDirectory() as temporary_directory:
