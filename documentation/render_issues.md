@@ -25,3 +25,13 @@ mode into the public tree. The live file was corrected during that run. On
 2026-09-08, `publish_comic_images` was changed to set published files to `0644`.
 The regression test starts with a `0600` source and checks that publication makes
 the output readable without changing the canonical source's permissions.
+
+## 2026-09-08: WebP MIME type needs hosting follow-up
+
+After deployment, `/comic/4/1.webp` returns HTTP 200 and its bytes match the
+canonical derivative, but Content-Type is `application/octet-stream` instead of
+`image/webp`. A unique query-string request also returned that type with
+Cloudflare `MISS`, so this is not just an old cached header. Merah's
+`/usr/share/misc/mime.types` already lists `image/webp`; inspect the active vhost
+MIME configuration in a hosting follow-up. No server configuration changed in
+this renderer run.
