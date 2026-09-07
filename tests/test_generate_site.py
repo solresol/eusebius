@@ -41,6 +41,7 @@ class GenerateSiteTests(unittest.TestCase):
             source_path = web_dir / "2" / "3.webp"
             source_path.parent.mkdir(parents=True)
             source_path.write_bytes(b"webp-derivative")
+            source_path.chmod(0o600)
 
             published = publish_comic_images(output_dir, [row], web_dir)
             render_comic_viewer(output_dir, published)
@@ -49,6 +50,11 @@ class GenerateSiteTests(unittest.TestCase):
                 (output_dir / "comic" / "2" / "3.webp").read_bytes(),
                 b"webp-derivative",
             )
+            self.assertEqual(
+                (output_dir / "comic" / "2" / "3.webp").stat().st_mode & 0o777,
+                0o644,
+            )
+            self.assertEqual(source_path.stat().st_mode & 0o777, 0o600)
             viewer = (output_dir / "comics.html").read_text(encoding="utf-8")
             self.assertIn('src="comic/2/3.webp"', viewer)
             self.assertIn("passages-book-8-section-13.html#p-8.13.1", viewer)

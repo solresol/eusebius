@@ -515,6 +515,8 @@ def publish_comic_images(
         target_path = output_dir / relative_path
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
+        # Private staging files may be 0600; the deployed web server must read them.
+        target_path.chmod(0o644)
         published_rows.append(row)
     return published_rows
 
