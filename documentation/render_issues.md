@@ -14,9 +14,18 @@ Islamic shrines, minarets, medieval/modern Jerusalem, and buildings constructed
 after the first century CE. The review JSON records the old and new exclusions;
 the original planner output and panel prompt remain intact.
 
-Next run: use the revised database prompt for panel 14, inspect the skyline,
-and publish only if the image passes historical review. Rejected images must
-remain outside the accepted originals/web paths so they cannot obstruct a retry.
+Resolved on 2026-09-15: the single retry used the revised database exclusions
+and passed visual review. No domed shrine, minarets, or readable text were
+visible. The architecture remains illustrative rather than an archaeological
+reconstruction. Accepted asset 15 is published at `/comic/4/2.webp`; the rejected
+asset and its evidence remain intact. Original and WebP hashes were verified
+against S3 downloads, and the public WebP matches the canonical derivative.
+The exact prompt, source snapshot, and review are preserved under
+`/home/eusebius/eusebius-comic/reviews/14/2026-09-15/` on `raksasa` and in S3.
+
+Panel 14 is now rendered. Next eligible panel is 15, plan 4 panel 3,
+"The Jerusalem church migrates to Pella". Rejected images must remain outside
+the accepted originals/web paths so they cannot obstruct a retry.
 
 ## 2026-09-01: deployed WebP returned HTTP 403
 
@@ -35,3 +44,21 @@ Cloudflare `MISS`, so this is not just an old cached header. Merah's
 `/usr/share/misc/mime.types` already lists `image/webp`; inspect the active vhost
 MIME configuration in a hosting follow-up. No server configuration changed in
 this renderer run.
+
+2026-09-15 diagnosis: the active `/etc/httpd.conf` has an explicit global
+`types` block containing PNG, JPEG, and GIF but no WebP mapping; it does not
+load `/usr/share/misc/mime.types`. The Eusebius vhost has no MIME override.
+The newly published `/comic/4/2.webp` also returns `application/octet-stream`
+on a Cloudflare MISS. Both canonical and deployed derivatives are mode `0644`.
+
+The hosting administrator should add this entry inside the existing global
+`types` block, validate the configuration with `httpd -n`, reload httpd, and
+verify a fresh image response:
+
+```text
+image/webp              webp
+```
+
+The `merah-personal-research-projects` skill says "Do not edit
+`/etc/httpd.conf` directly. Print the stanza the user should add." This run
+therefore records the diagnosed fix without changing the shared server config.
