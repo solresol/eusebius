@@ -51,7 +51,7 @@ To clean up the rough First1K English against the Greek:
 uv run python scripts/translate_passages.py --mode cleanup --limit 100
 ```
 
-Cleanup mode uses `gpt-5.4-mini` by default. It is only for minor OCR,
+Cleanup mode uses `gpt-5.6-terra` by default. It is only for minor OCR,
 spacing, punctuation, and alignment repairs to the supplied English, with the
 Greek used as a guardrail. The default daily token budget is 500,000 tokens.
 
@@ -61,7 +61,7 @@ For a fresh translation from Greek:
 uv run python scripts/translate_passages.py --mode translate --limit 3
 ```
 
-Translation mode uses `gpt-5.5` by default and has a 10,000-token daily budget.
+Translation mode uses `gpt-6-sol` by default and has a 10,000-token daily budget.
 Runs are stored in PostgreSQL with model, prompt version, token counts, status,
 and error messages.
 

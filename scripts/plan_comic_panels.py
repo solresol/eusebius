@@ -14,7 +14,7 @@ import psycopg
 from openai import OpenAI
 
 
-DEFAULT_MODEL = "gpt-5.5"
+DEFAULT_MODEL = "gpt-6-sol"
 DEFAULT_PROMPT_VERSION = "documentary-comic-plan-v1"
 DEFAULT_DAILY_TOKEN_BUDGET = 10_000
 

@@ -16,12 +16,12 @@ from openai import OpenAI
 
 MODE_DEFAULTS = {
     "cleanup": {
-        "model": "gpt-5.4-mini",
+        "model": "gpt-5.6-terra",
         "prompt_version": "english-cleanup-v1",
         "daily_token_budget": 500_000,
     },
     "translate": {
-        "model": "gpt-5.5",
+        "model": "gpt-6-sol",
         "prompt_version": "greek-translation-v1",
         "daily_token_budget": 10_000,
     },
