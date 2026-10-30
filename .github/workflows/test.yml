@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'codex/eusebius-cloud-exchange']
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres: ['16', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: eusebius_test
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: eusebius_exchange_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      EUSEBIUS_EXCHANGE_TEST_DSN: postgresql://eusebius_test:fixture-only@localhost:5432/eusebius_exchange_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --python 3.11
+      - run: uv run --locked --python 3.11 python -m unittest discover -s tests -v

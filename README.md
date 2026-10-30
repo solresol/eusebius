@@ -135,3 +135,11 @@ Private off-host backup is configured through `EUSEBIUS_COMIC_S3_URI`. On
 ```bash
 ./scripts/sync_comic_assets.sh
 ```
+
+# Cloud comic exchange (implemented, not cut over)
+
+The optional [cloud exchange](documentation/comic_cloud_exchange.md) exports an
+immutable source/queued-panel snapshot, coordinates one cloud worker through an
+S3 lease, and imports reviewed images transactionally on Raksasa. It does not
+change the existing cron or saved cloud environment. Translation, planning,
+PostgreSQL ownership and website publication remain on Raksasa in this increment.

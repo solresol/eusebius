@@ -8,3 +8,5 @@ logs/
 
 __pycache__/
 *.pyc
+.comic-exchange/
+comic_work/
