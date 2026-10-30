@@ -6,7 +6,7 @@ cd "$ROOT"
 
 mkdir -p logs
 
-: "${EUSEBIUS_DATABASE_URL:=postgresql:///eusebius}"
+: "${EUSEBIUS_DATABASE_URL:=postgresql:///eusebius?host=/var/run/postgresql&port=5433}"
 
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if ! git pull --ff-only >> logs/git_pull.log 2>&1; then

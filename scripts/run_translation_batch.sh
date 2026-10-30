@@ -6,7 +6,7 @@ cd "$ROOT"
 
 mkdir -p logs
 
-: "${EUSEBIUS_DATABASE_URL:=postgresql:///eusebius}"
+: "${EUSEBIUS_DATABASE_URL:=postgresql:///eusebius?host=/var/run/postgresql&port=5433}"
 : "${EUSEBIUS_TRANSLATION_MODE:=cleanup}"
 : "${EUSEBIUS_TRANSLATION_LIMIT:=100}"
 

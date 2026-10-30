@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--database-url",
-        default=os.environ.get("EUSEBIUS_DATABASE_URL", "postgresql:///eusebius"),
+        default=os.environ.get("EUSEBIUS_DATABASE_URL", "postgresql:///eusebius?host=/var/run/postgresql&port=5433"),
         help="PostgreSQL connection string",
     )
     parser.add_argument(

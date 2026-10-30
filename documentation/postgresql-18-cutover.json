@@ -1,0 +1,68 @@
+{
+  "proof_schema_version": 1,
+  "application": "Eusebius",
+  "status": "production_cron_routed_scheduled_acceptance_pending",
+  "cutover_at": "2026-10-30T07:31:59.036407+00:00",
+  "source_revision_during_copy": "b05426ebe0cd08b72662350bcfc4ead5286446b3",
+  "database": {
+    "name": "eusebius",
+    "role": "eusebius",
+    "source_port": 5432,
+    "production_port": 5433,
+    "production_socket": "/var/run/postgresql",
+    "fresh_pg18_oid": "728642592",
+    "preserved_pg18_candidate": "eusebius_stale_20261014_preserved_20261030",
+    "preserved_pg18_oid": "450786505"
+  },
+  "all_nine_table_fingerprints_match": true,
+  "schema_ownership_object_acls_sha256": "09e01138b5570298e08387bdcd546ad82eba129006173c9c6e831252c4934298",
+  "seven_sequence_states_match": true,
+  "initial_source_backup": {
+    "path": "/var/backups/postgresql/eusebius-cutover-20261030T071500Z/initial-backup/eusebius-pg16-independent.dump",
+    "bytes": 1742502,
+    "sha256": "2365e2916d43ffbee2f4e69d305da79aef0fbc0ed3065bbbcc7fe9a1c204aa0a",
+    "seconds": 1.518
+  },
+  "initial_source_backup_restore_verified": true,
+  "final_source_dump": {
+    "path": "/var/backups/postgresql/eusebius-cutover-20261030T071500Z/cutover/final-consistent-pg16-source.dump",
+    "bytes": 1742502,
+    "sha256": "710ecf441237e5c781f9942001736c5cf2633acb191fa383f340abf5781c4c33",
+    "seconds": 0.315
+  },
+  "destination_backup": {
+    "path": "/var/backups/postgresql/eusebius-cutover-20261030T071500Z/cutover/destination-pg18-independent.dump",
+    "bytes": 1742770,
+    "sha256": "4f7706f3e983783e1173cbdc954e77144bcf95fe477429b5e5a50822de010f96",
+    "seconds": 0.315
+  },
+  "destination_backup_restore_verified": true,
+  "site_comparison": {
+    "files": 284,
+    "passages": 650,
+    "rendered_panels": 14,
+    "source_sha256": "f88edaf0b6eea8ea223ab5689d2aa8e951eddd9217b71532709a2e2a8809f642",
+    "destination_sha256": "f88edaf0b6eea8ea223ab5689d2aa8e951eddd9217b71532709a2e2a8809f642",
+    "fixed_clock": "2026-10-30T07:29:07.829233+00:00",
+    "provider_calls": 0,
+    "publication_calls": 0
+  },
+  "tests": {
+    "existing_unit_tests_passed": 14,
+    "shell_and_syntax_checks_passed": true
+  },
+  "safeguards": {
+    "source_and_stale_candidate_preserved": true,
+    "cron_restored_only_database_uri_changed": true,
+    "no_cluster_restart_or_authentication_change": true,
+    "no_model_or_budget_change": true,
+    "no_extra_paid_batch": true,
+    "no_cloud_exchange_or_claim_changes": true
+  },
+  "scheduled_acceptance": {
+    "status": "pending",
+    "site_at": "2026-10-30T16:15:00Z",
+    "writer_at": "2026-10-30T17:15:00Z",
+    "extra_paid_batch_permitted": false
+  }
+}
