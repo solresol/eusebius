@@ -373,6 +373,21 @@ class ComicExchangePostgresTests(unittest.TestCase):
         self.pg.execute("UPDATE comic_panels SET panel_prompt='' WHERE comic_panel_id=%s", (first["panel_id"],))
         self.assertFalse(collect_units(self.pg)[0]["pending"])
 
+    def test_prologue_labels_export_and_import_before_numbered_books_and_chapters(self):
+        unit = collect_units(self.pg)[1]
+        self.pg.execute("UPDATE passages SET book='2',chapter='prologue' WHERE passage_id=%s",
+                        (unit["passage_id"],))
+        self.assertEqual([row["chapter"] for row in collect_units(self.pg)], ["prologue", "1"])
+        self.pg.execute("UPDATE passages SET book='prologue',chapter='prologue' WHERE passage_id=%s",
+                        (unit["passage_id"],))
+        units = collect_units(self.pg)
+        self.assertEqual([row["book"] for row in units], ["prologue", "2"])
+        sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.checkpoint()
+        self.assertEqual(self.unit["book"], "prologue")
+        self.assertEqual(self.unit["chapter"], "prologue")
+        self.assertEqual(sync_raksasa(self.store, self.dsn, self.comic_root)["accepted"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

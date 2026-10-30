@@ -51,8 +51,10 @@ ETag with `If-Match`; conflicts terminate the session. Never upload state with
 lease. Leases last six hours for cloud production and one hour for server sync.
 Renew before expiry. Expired owners cannot renew, record, release or acknowledge.
 
-The cloud claim fixes the earliest eligible panel in numeric book/chapter/
-paragraph order, then plan and panel order. Eligibility requires a queued panel,
+The cloud claim fixes the earliest eligible panel in source book/chapter/
+paragraph order, then plan and panel order. `prologue` sections precede numbered
+books or chapters, numbers sort numerically, and any other labels follow in
+deterministic lexical order. Eligibility requires a queued panel,
 a nonempty prompt, an active planned/rendering plan, and no generated or staged
 accepted asset.
 One claim can checkpoint one panel, and pending results block further production

@@ -67,7 +67,13 @@ UNIT_QUERY = """
           AND english_translation IS NOT NULL
         ORDER BY completed_at DESC NULLS LAST, translation_run_id DESC LIMIT 1
     ) latest ON TRUE
-    ORDER BY p.book::integer, p.chapter::integer, p.paragraph_index,
+    ORDER BY CASE WHEN p.book = 'prologue' THEN 0
+                  WHEN p.book ~ '^[0-9]+$' THEN 1 ELSE 2 END,
+             CASE WHEN p.book ~ '^[0-9]+$' THEN p.book::numeric END, p.book,
+             CASE WHEN p.chapter = 'prologue' THEN 0
+                  WHEN p.chapter ~ '^[0-9]+$' THEN 1 ELSE 2 END,
+             CASE WHEN p.chapter ~ '^[0-9]+$' THEN p.chapter::numeric END, p.chapter,
+             p.paragraph_index,
              cp.comic_plan_id, pn.panel_number, pn.comic_panel_id
 """
 
