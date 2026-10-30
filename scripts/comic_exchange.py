@@ -362,7 +362,18 @@ def hydrate(store, snapshot: dict, destination: Path) -> None:
 
 def write_once(path: Path, data: bytes) -> None:
     """Create immutable local files durably; a retry may only find identical bytes."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    missing = []
+    directory = path.parent
+    while not directory.exists():
+        missing.append(directory)
+        directory = directory.parent
+    for directory in reversed(missing):
+        directory.mkdir(exist_ok=True)
+        parent = os.open(directory.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent)
+        finally:
+            os.close(parent)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".exchange-", delete=False) as handle:

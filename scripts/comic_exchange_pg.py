@@ -87,6 +87,8 @@ def export_snapshot(store, pg, comic_root: Path) -> dict:
         units = collect_units(pg)
     references = []
     for unit in units:
+        generated = [asset for asset in unit["assets"] if asset["status"] == "generated"]
+        current_asset_id = max((asset["asset_id"] for asset in generated), default=None)
         for asset in unit["assets"]:
             if asset["status"] != "generated":
                 continue
@@ -94,7 +96,9 @@ def export_snapshot(store, pg, comic_root: Path) -> dict:
             if not original.resolve().is_relative_to(comic_root.resolve()):
                 raise ValueError("Existing original is outside configured comic root")
             paths = [("original", original)]
-            if asset["public_path"]:
+            # The legacy web directory holds only the latest panel derivative.
+            # Preserve historical originals without attributing today's WebP to them.
+            if asset["public_path"] and asset["asset_id"] == current_asset_id:
                 suffix = Path(asset["public_path"]).suffix
                 if suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
                     raise ValueError("Unsupported existing derivative suffix")

@@ -8,6 +8,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import psycopg
+from PIL import Image
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 from psycopg.rows import dict_row
@@ -147,6 +148,28 @@ class ComicExchangePostgresTests(unittest.TestCase):
         self.assertEqual(self.counts()[1], 1)
         self.assertEqual(original.read_bytes(), data)
         self.assertEqual(self.pg.execute("SELECT model FROM comic_image_assets").fetchone()["model"], "previous")
+
+    def test_reference_export_preserves_old_original_without_mislabeling_current_webp(self):
+        unit = collect_units(self.pg)[0]
+        self.comic_root.mkdir(parents=True)
+        for index, color in enumerate(("navy", "red")):
+            original = self.comic_root / f"accepted-{index}.png"
+            image = Image.new("RGB", (8, 6), color)
+            image.save(original)
+            web = self.comic_root / "web" / str(unit["plan_id"]) / "1.webp"
+            web.parent.mkdir(parents=True, exist_ok=True)
+            image.save(web)
+            self.pg.execute("""INSERT INTO comic_image_assets
+                (comic_panel_id,model,prompt_sha256,local_path,sha256,public_path,status)
+                VALUES (%s,'previous',%s,%s,%s,%s,'generated')""",
+                            (unit["panel_id"], "0" * 64, str(original), digest(original.read_bytes()),
+                             f"/comic/{unit['plan_id']}/1.webp"))
+        sync_raksasa(self.store, self.dsn, self.comic_root)
+        snapshot = load_snapshot(self.store, read_state(self.store)[0]["snapshot"])
+        self.assertEqual([ref["role"] for ref in snapshot["references"]], ["original", "original", "web"])
+        web_ref = snapshot["references"][-1]
+        self.assertEqual(web_ref["sha256"], digest(web.read_bytes()))
+        self.assertEqual(web_ref["asset_id"], max(ref["asset_id"] for ref in snapshot["references"]))
 
     def test_commit_then_lost_ack_replays_without_duplicate_import(self):
         self.checkpoint()
