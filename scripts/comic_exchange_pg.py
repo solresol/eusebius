@@ -10,7 +10,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from scripts.comic_exchange import (
-    MAX_FILE, MAX_JSON, MAX_PENDING, VERSION, acquire, bootstrap, digest, encode,
+    MAX_FILE, MAX_JSON, MAX_PENDING, VERSION, ConflictError, acquire, bootstrap, digest, encode,
     immutable_key, load_snapshot, next_unit, owned, put_immutable, read_hashed,
     release, safe_path, save_owned, validate_manifest, validate_payloads, write_once,
 )
@@ -32,7 +32,7 @@ def collect_units(pg) -> list[dict]:
         unit["pending"] = (
             unit["panel_status"] == "queued" and unit["plan_status"] in {"planned", "rendering"}
             and bool(unit["panel_prompt"].strip())
-            and not any(asset["status"] == "generated" for asset in unit["assets"])
+            and not any(asset["status"] in {"generated", "staged"} for asset in unit["assets"])
         )
     return rows
 
@@ -140,19 +140,28 @@ def download_result(store, entry: dict) -> tuple[dict, dict, dict]:
     return manifest, snapshot, payloads
 
 
-def materialize_bundle(comic_root: Path, manifest: dict, unit: dict, payloads: dict) -> tuple[Path, str]:
-    """Durable immutable storage also repairs local files after an unacknowledged commit."""
+def archive_bundle(comic_root: Path, manifest: dict, payloads: dict) -> Path:
+    """Stage only result-addressed files; rollback must never reserve a public path."""
     result_id = manifest["result_id"]
     for file in manifest["files"]:
         destination = rooted(comic_root, f"exchange/{result_id}/{file['sha256']}")
         write_once(destination, payloads[file["path"]])
     by_role = {file["role"]: file for file in manifest["files"]}
-    original_file, web = by_role["original"], by_role["web"]
-    public_path = f"/comic/{unit['plan_id']}/{unit['panel_number']}.webp"
-    derivative = rooted(comic_root, f"web/{unit['plan_id']}/{unit['panel_number']}.webp")
-    write_once(derivative, payloads[web["path"]])
+    original_file = by_role["original"]
     local_path = rooted(comic_root, f"exchange/{result_id}/{original_file['sha256']}")
-    return local_path, public_path
+    return local_path
+
+
+def publication_target(comic_root: Path, unit: dict) -> tuple[Path, str]:
+    """Use the legacy site convention without changing its publisher."""
+    public_path = f"/comic/{unit['plan_id']}/{unit['panel_number']}.webp"
+    return rooted(comic_root, f"web/{unit['plan_id']}/{unit['panel_number']}.webp"), public_path
+
+
+def check_existing_derivative(path: Path, data: bytes) -> None:
+    """Preflight only: never reserve or replace a canonical file before acceptance."""
+    if path.exists() and (path.stat().st_size != len(data) or path.read_bytes() != data):
+        raise ConflictError("Existing local artifact differs; preserving it")
 
 
 def accept_result(store, session: dict, pg, comic_root: Path, entry: dict,
@@ -170,7 +179,7 @@ def accept_result(store, session: dict, pg, comic_root: Path, entry: dict,
             if receipt["manifest_sha256"] != entry["sha256"]:
                 raise ValueError("Replay differs from the durable receipt")
             if receipt["status"] == "accepted":
-                materialize_bundle(comic_root, manifest, validate_manifest(manifest, entry, snapshot), payloads)
+                archive_bundle(comic_root, manifest, payloads)
             owned(store, session)
             return receipt["status"]
         current = next_unit({"units": collect_units(pg)})
@@ -184,18 +193,18 @@ def accept_result(store, session: dict, pg, comic_root: Path, entry: dict,
             width, height = validate_payloads(manifest, payloads)
             by_role = {file["role"]: file for file in manifest["files"]}
             original_file = by_role["original"]
-            local_path, public_path = materialize_bundle(comic_root, manifest, original, payloads)
+            derivative, _ = publication_target(comic_root, original)
+            check_existing_derivative(derivative, payloads[by_role["web"]["path"]])
+            local_path = archive_bundle(comic_root, manifest, payloads)
             row = pg.execute("""
                 INSERT INTO comic_image_assets
                     (comic_panel_id, model, prompt_sha256, local_path, s3_uri, public_path,
                      sha256, width, height, status)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'generated') RETURNING comic_image_asset_id
+                VALUES (%s,%s,%s,%s,%s,NULL,%s,%s,%s,'staged') RETURNING comic_image_asset_id
             """, (original["panel_id"], manifest["model"], by_role["prompt"]["sha256"],
                   str(local_path), f"{store.identity}/exchange/v1/results/{result_id}/files/{original_file['sha256']}",
-                  public_path, original_file["sha256"], width, height)).fetchone()
+                  original_file["sha256"], width, height)).fetchone()
             asset_id = row["comic_image_asset_id"]
-            pg.execute("UPDATE comic_panels SET status='rendered' WHERE comic_panel_id=%s",
-                       (original["panel_id"],))
         pg.execute("""
             INSERT INTO comic_exchange_receipts
                 (result_id,comic_panel_id,claim_token,snapshot_sha256,manifest_sha256,
@@ -208,9 +217,55 @@ def accept_result(store, session: dict, pg, comic_root: Path, entry: dict,
                         (result_id,path,role,s3_key,sha256,byte_count) VALUES (%s,%s,%s,%s,%s,%s)""",
                        (result_id, file["path"], file["role"],
                         f"exchange/v1/results/{result_id}/files/{file['sha256']}", file["sha256"], file["size"]))
-        # A lost lease rolls back DB changes; files are harmless immutable orphans.
+        # Rollback leaves only result-addressed archives, never a canonical WebP.
         owned(store, session)
     return status
+
+
+def promote_result(store, session: dict, pg, comic_root: Path, entry: dict,
+                   manifest: dict, snapshot: dict, payloads: dict) -> None:
+    """Promote only a durably accepted receipt, then atomically expose it to readers."""
+    unit = validate_manifest(manifest, entry, snapshot)
+    by_role = {file["role"]: file for file in manifest["files"]}
+    derivative, public_path = publication_target(comic_root, unit)
+    original_path = rooted(comic_root, f"exchange/{entry['result_id']}/{by_role['original']['sha256']}")
+    owned(store, session)
+    with pg.transaction():
+        pg.execute("SELECT pg_advisory_xact_lock(17338657)")
+        pg.execute("""LOCK TABLE comic_panels, comic_image_assets IN SHARE ROW EXCLUSIVE MODE""")
+        accepted = pg.execute("""
+            SELECT r.status AS receipt_status, r.manifest_sha256,
+                   a.comic_image_asset_id AS asset_id, a.status AS asset_status,
+                   a.local_path, a.public_path, a.sha256, a.comic_panel_id AS panel_id,
+                   pn.status AS panel_status, pn.comic_plan_id AS plan_id, pn.panel_number
+            FROM comic_exchange_receipts r
+            JOIN comic_image_assets a ON a.comic_image_asset_id = r.comic_image_asset_id
+            JOIN comic_panels pn ON pn.comic_panel_id = a.comic_panel_id
+            WHERE r.result_id = %s
+        """, (entry["result_id"],)).fetchone()
+        if (not accepted or accepted["receipt_status"] != "accepted"
+                or accepted["manifest_sha256"] != entry["sha256"]
+                or accepted["asset_status"] not in {"staged", "generated"}
+                or accepted["panel_status"] != ("queued" if accepted["asset_status"] == "staged" else "rendered")
+                or accepted["panel_id"] != unit["panel_id"]
+                or accepted["plan_id"] != unit["plan_id"]
+                or accepted["panel_number"] != unit["panel_number"]
+                or accepted["local_path"] != str(original_path)
+                or accepted["sha256"] != by_role["original"]["sha256"]
+                or accepted["public_path"] not in {None, public_path}):
+            raise ConflictError("Publication intent differs from the durable accepted receipt")
+        other = pg.execute("""SELECT 1 FROM comic_image_assets
+            WHERE comic_panel_id=%s AND status='generated' AND comic_image_asset_id<>%s""",
+                           (unit["panel_id"], accepted["asset_id"])).fetchone()
+        if other:
+            raise ConflictError("Another accepted asset exists; preserving its publication")
+        # The receipt has already committed. If this transaction fails after the
+        # link, its staged asset remains reserved for identical retry/reconciliation.
+        write_once(derivative, payloads[by_role["web"]["path"]])
+        pg.execute("""UPDATE comic_image_assets SET status='generated',public_path=%s
+                      WHERE comic_image_asset_id=%s""", (public_path, accepted["asset_id"]))
+        pg.execute("UPDATE comic_panels SET status='rendered' WHERE comic_panel_id=%s", (unit["panel_id"],))
+        owned(store, session)
 
 
 def sync_raksasa(store, database_url: str, comic_root: Path, limit: int = 4) -> dict:
@@ -232,13 +287,16 @@ def sync_raksasa(store, database_url: str, comic_root: Path, limit: int = 4) -> 
         for entry in pending:
             manifest, snapshot, payloads = download_result(store, entry)
             status = accept_result(store, session, pg, comic_root, entry, manifest, snapshot, payloads)
+            if status == "accepted":
+                promote_result(store, session, pg, comic_root, entry, manifest, snapshot, payloads)
             counts[status] += 1
-            state = owned(store, session)
-            state["pending"].remove(entry)
-            save_owned(store, session, state)
         pointer = export_snapshot(store, pg, comic_root)
         state = owned(store, session)
+        for entry in pending:
+            state["pending"].remove(entry)
         state["snapshot"] = pointer
+        # Acknowledgements and the refreshed queue become visible in one CAS, so
+        # a crash cannot leave an idle worker reading the pre-import queue.
         save_owned(store, session, state)
     release(store, session)
     # On failure, an uncertain CAS may already have succeeded. Never fetch a new

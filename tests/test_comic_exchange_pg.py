@@ -14,10 +14,10 @@ from psycopg.conninfo import make_conninfo
 from psycopg.rows import dict_row
 
 from scripts.comic_exchange import (
-    ConflictError, acquire, digest, load_snapshot, read_state, record_result,
+    BusyError, ConflictError, acquire, digest, load_snapshot, owned, read_state, record_result,
     release, save_owned, write_state,
 )
-from scripts.comic_exchange_pg import collect_units, sync_raksasa
+from scripts.comic_exchange_pg import collect_units, promote_result, sync_raksasa
 from scripts.generate_site import fetch_comic_rows, publish_comic_images
 from test_comic_exchange import fake_store, make_bundle
 
@@ -84,6 +84,19 @@ class ComicExchangePostgresTests(unittest.TestCase):
     def counts(self):
         return [self.pg.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"]
                 for table in ("comic_exchange_receipts", "comic_image_assets", "comic_exchange_files")]
+
+    def site_rows(self):
+        with psycopg.connect(self.dsn) as pg:
+            return fetch_comic_rows(pg)
+
+    def assert_staged_publication(self):
+        self.assertEqual(self.counts(), [1, 1, 5])
+        asset = self.pg.execute("SELECT status,public_path FROM comic_image_assets").fetchone()
+        self.assertEqual(asset, {"status": "staged", "public_path": None})
+        self.assertEqual(self.pg.execute("SELECT status FROM comic_panels WHERE comic_panel_id=%s",
+                                         (self.unit["panel_id"],)).fetchone()["status"], "queued")
+        self.assertEqual(self.site_rows(), [])
+        self.assertEqual(len(read_state(self.store)[0]["pending"]), 1)
 
     def test_import_publishes_existing_site_and_replay_is_idempotent(self):
         result_id, entry = self.checkpoint()
@@ -232,6 +245,118 @@ class ComicExchangePostgresTests(unittest.TestCase):
                 sync_raksasa(self.store, self.dsn, self.comic_root)
         self.assertEqual(self.counts(), [0, 0, 0])
         self.assertEqual(len(read_state(self.store)[0]["pending"]), 1)
+
+    def test_rollback_after_archive_does_not_poison_a_different_valid_result(self):
+        old_result_id, _ = self.checkpoint()
+        old_image = (self.work / "original.png").read_bytes()
+        old_archive = self.comic_root / "exchange" / old_result_id / digest(old_image)
+        with patch("scripts.comic_exchange_pg.owned", side_effect=ConflictError("lease lost after archive")):
+            with self.assertRaises(ConflictError):
+                sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assertEqual(self.counts(), [0, 0, 0])
+        self.assertEqual(old_archive.read_bytes(), old_image)
+        # A changed authoritative plan legitimately rejects the old result and
+        # permits a new claim. Retain every old artifact, including the orphan.
+        self.pg.execute("UPDATE comic_panels SET caption='A corrected source-grounded caption' WHERE comic_panel_id=%s",
+                        (self.unit["panel_id"],))
+        self.expire_test_lease()
+        self.assertEqual(sync_raksasa(self.store, self.dsn, self.comic_root)["rejected"], 1)
+        image = Image.new("RGB", (8, 6), "red")
+        image.save(self.work / "original.png")
+        image.save(self.work / "web.webp")
+        new_result_id, _ = self.checkpoint()
+        self.assertNotEqual(old_result_id, new_result_id)
+        self.assertEqual(sync_raksasa(self.store, self.dsn, self.comic_root)["accepted"], 1)
+        web = self.comic_root / "web" / str(self.unit["plan_id"]) / "1.webp"
+        self.assertEqual(web.read_bytes(), (self.work / "web.webp").read_bytes())
+        self.assertEqual(old_archive.read_bytes(), old_image)
+        self.assertEqual(self.counts(), [2, 1, 10])
+
+    def test_committed_stage_is_invisible_until_postcommit_promotion(self):
+        self.checkpoint()
+        with patch("scripts.comic_exchange_pg.promote_result", side_effect=OSError("interrupted before promotion")):
+            with self.assertRaises(OSError):
+                sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assert_staged_publication()
+        web = self.comic_root / "web" / str(self.unit["plan_id"]) / "1.webp"
+        self.assertFalse(web.exists())
+        self.assertFalse(next(u for u in collect_units(self.pg) if u["panel_id"] == self.unit["panel_id"])["pending"])
+        self.expire_test_lease()
+        with self.assertRaises(BusyError):
+            acquire(self.store, "cloud")
+        sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assertEqual(self.counts(), [1, 1, 5])
+        self.assertEqual(len(self.site_rows()), 1)
+
+    def test_publication_rollback_after_canonical_write_reconciles_same_acceptance(self):
+        self.checkpoint()
+        self.pg.execute("""CREATE FUNCTION fail_publication() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN IF NEW.status = 'generated' THEN RAISE EXCEPTION 'synthetic promotion failure'; END IF;
+            RETURN NEW; END $$;
+            CREATE TRIGGER fail_publication BEFORE UPDATE ON comic_image_assets
+            FOR EACH ROW EXECUTE FUNCTION fail_publication()""")
+        with self.assertRaises(psycopg.errors.RaiseException):
+            sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assert_staged_publication()
+        web = self.comic_root / "web" / str(self.unit["plan_id"]) / "1.webp"
+        self.assertEqual(web.read_bytes(), (self.work / "web.webp").read_bytes())
+        self.pg.execute("DROP TRIGGER fail_publication ON comic_image_assets")
+        self.expire_test_lease()
+        sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assertEqual(self.counts(), [1, 1, 5])
+        self.assertEqual(len(self.site_rows()), 1)
+        self.assertEqual(read_state(self.store)[0]["pending"], [])
+
+    def test_site_reader_cannot_see_uncommitted_promotion(self):
+        self.checkpoint()
+        web = self.comic_root / "web" / str(self.unit["plan_id"]) / "1.webp"
+        observations = []
+
+        def inspect_ownership(store, session):
+            state = owned(store, session)
+            asset = self.pg.execute("SELECT status FROM comic_image_assets").fetchone()
+            if asset and asset["status"] == "staged" and web.exists():
+                observations.append(web.read_bytes())
+                self.assertEqual(self.site_rows(), [])
+            return state
+
+        with patch("scripts.comic_exchange_pg.owned", side_effect=inspect_ownership):
+            sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assertEqual(observations, [(self.work / "web.webp").read_bytes()])
+        self.assertEqual(len(self.site_rows()), 1)
+
+    def test_postcommit_collision_preserves_unrelated_file_and_staged_receipt(self):
+        self.checkpoint()
+        web = self.comic_root / "web" / str(self.unit["plan_id"]) / "1.webp"
+
+        def conflicting_promotion(*args):
+            web.parent.mkdir(parents=True)
+            web.write_bytes(b"unrelated concurrent artwork")
+            return promote_result(*args)
+
+        with patch("scripts.comic_exchange_pg.promote_result", side_effect=conflicting_promotion):
+            with self.assertRaises(ConflictError):
+                sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assertEqual(web.read_bytes(), b"unrelated concurrent artwork")
+        self.assert_staged_publication()
+
+    def test_export_failure_cannot_acknowledge_into_stale_queue(self):
+        self.checkpoint()
+        old_pointer = read_state(self.store)[0]["snapshot"]
+        with patch("scripts.comic_exchange_pg.export_snapshot", side_effect=OSError("interrupted export")):
+            with self.assertRaises(OSError):
+                sync_raksasa(self.store, self.dsn, self.comic_root)
+        self.assertEqual(self.counts(), [1, 1, 5])
+        state, _ = read_state(self.store)
+        self.assertEqual(state["snapshot"], old_pointer)
+        self.assertEqual(len(state["pending"]), 1)
+        self.expire_test_lease()
+        with self.assertRaises(BusyError):
+            acquire(self.store, "cloud")
+        sync_raksasa(self.store, self.dsn, self.comic_root)
+        state, _ = read_state(self.store)
+        self.assertNotEqual(state["snapshot"], old_pointer)
+        self.assertEqual(state["pending"], [])
 
     def test_sync_never_falls_back_to_default_database_or_unbounded_limit(self):
         for limit in (0, 33):

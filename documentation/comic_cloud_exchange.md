@@ -53,7 +53,8 @@ Renew before expiry. Expired owners cannot renew, record, release or acknowledge
 
 The cloud claim fixes the earliest eligible panel in numeric book/chapter/
 paragraph order, then plan and panel order. Eligibility requires a queued panel,
-a nonempty prompt, an active planned/rendering plan, and no generated asset.
+a nonempty prompt, an active planned/rendering plan, and no generated or staged
+accepted asset.
 One claim can checkpoint one panel, and pending results block further production
 until Raksasa imports them. A completed result survives `abort` or lease expiry.
 After an uncertain network response, inspect state first; never assume failure
@@ -149,19 +150,37 @@ It compares the complete exported unit and current earliest eligible unit.
 Changed text, translation, source metadata, prompt, caption, plan, status or
 existing generated asset causes a durable rejection, preserving accepted art.
 
-Acceptance archives all files under `comic_root/exchange/<result-id>/<sha256>`,
-writes the existing `web/<plan>/<panel>.webp` convention without overwriting a
-different file, inserts a generated `comic_image_assets` row, marks the panel
-rendered, and records a receipt plus all file metadata in one PostgreSQL
-transaction. Files are fsynced before commit. The importer checks its lease
-before commit and acknowledges in S3 **after** commit. A crash before commit
-leaves retryable immutable files; a crash after commit deduplicates by result ID
-and repairs missing local files before acknowledgement. A lost claim cannot
-clear its successor's ownership. Database uniqueness also prevents two accepted
-exchange results for a panel.
+Acceptance first archives files only under
+`comic_root/exchange/<result-id>/<sha256>`, inserts a **staged**
+`comic_image_assets` row with no public path, and commits a receipt plus all file
+metadata in one PostgreSQL transaction. The panel remains queued. This phase
+never writes `web/<plan>/<panel>.webp`: rollback leaves only result-addressed
+archives and cannot obstruct a later different valid result. Existing canonical
+files are checked without replacing or reserving them.
 
-It then exports fresh authoritative content under the same conditional lease
-and releases it. Failures leave the owner to expire; they never force-unlock
+Only **after that receipt commits**, a separate publication transaction verifies
+the accepted receipt/asset association and promotes the fsynced derivative into
+the existing `web/<plan>/<panel>.webp` convention. It then atomically marks the
+asset generated, sets its public path and marks the panel rendered. The existing
+site query excludes staged assets, so a site build before or during promotion
+sees the previous committed catalogue; after commit it sees the complete file.
+An interrupted promotion may leave a canonical file belonging to a durable
+accepted receipt, while its staged row remains invisible. Retrying that same
+pending result repairs missing files and finalizes publication idempotently.
+The accepted receipt reserves the panel; it cannot be replaced with a different
+result after this point. A conflicting unrelated file or accepted asset is
+preserved and stops reconciliation for investigation.
+
+The importer checks its lease before each database commit. It exports fresh
+authoritative content, then updates the snapshot pointer and acknowledges the
+processed results together in **one conditional S3 state write**, after durable
+acceptance and publication. A crash during export therefore cannot leave an
+idle worker reading an acknowledged but obsolete queue. Lost acknowledgements
+deduplicate by result ID and reconcile publication before retrying. Database
+uniqueness prevents two accepted exchange results for a panel. A lost claim
+cannot clear its successor's ownership.
+
+The importer then releases its lease. Failures leave the owner to expire; they never force-unlock
 an uncertain state. Inspect errors, state and PostgreSQL receipts before retry.
 Corrupt/missing artifacts stop import without acknowledgement. Repair the
 underlying object/file or investigate manually; do not delete originals or
@@ -215,6 +234,7 @@ Disposable PostgreSQL integration tests additionally need
 schemas only in that explicitly supplied disposable database; they never read
 `EUSEBIUS_DATABASE_URL`. CI runs them on PostgreSQL 16 and 18. They exercise
 numeric ordering, stale source/translation/plan and existing-art rejection,
-site publication, corrupt assets, local collisions, rollback, replay and lost
-acknowledgements. S3 uses an atomic-precondition fake in tests; a live isolated
+site publication, corrupt assets, local collisions, rollback followed by a
+different valid result, interrupted promotion, concurrent site visibility,
+replay and lost acknowledgements. S3 uses an atomic-precondition fake in tests; a live isolated
 S3 smoke test remains a deployment prerequisite, not a claimed success.
